@@ -62,8 +62,8 @@ const ClaimsDashboard = () => {
 
     loadData();
     
-    // Refresh data every 30 seconds
-    const refreshInterval = setInterval(loadData, 30000);
+    // Refresh data every 5 minutes
+    const refreshInterval = setInterval(loadData, 300000);
     return () => clearInterval(refreshInterval);
   }, []);
 
