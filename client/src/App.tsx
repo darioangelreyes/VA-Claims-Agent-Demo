@@ -1,9 +1,8 @@
-import ClaimsDashboard from "./pages/ClaimsDashboard";
+import PactActAdjudicationDashboard from "./pages/PactActAdjudicationDashboard";
 
 function App() {
-  return (
-    <ClaimsDashboard />
-  );
+  return <PactActAdjudicationDashboard />;
 }
 
 export default App;
+

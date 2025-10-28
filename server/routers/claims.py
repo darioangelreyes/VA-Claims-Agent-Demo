@@ -1,8 +1,8 @@
 """
 Claims Router - Provides endpoints for VA Claims Dashboard
 """
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Body
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from server.services.claims_service import ClaimsService
 
@@ -91,4 +91,228 @@ async def get_critical_claims() -> List[CriticalClaim]:
         return claims
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch critical claims: {str(e)}")
+
+
+# ============================================================================
+# PACT ACT CLAIMS ADJUDICATION ENDPOINTS
+# ============================================================================
+
+class AdjudicatorStats(BaseModel):
+    pendingClaimsPercent: float
+    avgDecisionTimeDays: int
+    presumptiveMatchRate: float
+
+
+class PendingClaim(BaseModel):
+    claimId: str
+    veteranName: str
+    dateSubmitted: str
+    claimedCondition: str
+    currentStatus: str
+    priorityLevel: str
+    fraudScore: float
+    complianceScore: float
+    isPactAct: Optional[bool] = True
+
+
+class HighPriorityClaim(BaseModel):
+    claimId: str
+    veteranName: str
+    dateSubmitted: str
+    claimedCondition: str
+    priorityReason: str
+    fraudScore: float
+    fraudReason: Optional[str]
+    complianceUpdate: Optional[str]
+    aiSummary: str
+
+
+class PactActStats(BaseModel):
+    totalEligible: int
+    exposureTypes: List[Dict[str, Any]]
+
+
+class AdjudicationDashboardData(BaseModel):
+    adjudicatorStats: AdjudicatorStats
+    pendingClaims: List[PendingClaim]
+    highPriorityClaims: List[HighPriorityClaim]
+    pactActStats: PactActStats
+
+
+class ClaimDetailEvidence(BaseModel):
+    serviceRecord: Dict[str, Any]
+    vaExam: Dict[str, Any]
+    medicalRecord: Dict[str, Any]
+
+
+class ClaimHistoryItem(BaseModel):
+    date: str
+    action: str
+    user: str
+
+
+class ClaimDetail(BaseModel):
+    claimId: str
+    veteranName: str
+    dateSubmitted: str
+    claimedCondition: str
+    currentStatus: str
+    priorityLevel: str
+    fraudScore: float
+    fraudReason: Optional[str]
+    complianceScore: float
+    complianceUpdate: Optional[str]
+    aiSummary: str
+    isPactActEligible: bool
+    exposureType: str
+    evidence: ClaimDetailEvidence
+    presumptiveMatchRate: Optional[float] = 74.0
+    history: List[ClaimHistoryItem]
+
+
+class ClaimActionRequest(BaseModel):
+    action: str
+    notes: Optional[str] = None
+    adjudicatorId: Optional[str] = None
+
+
+class ClaimActionResponse(BaseModel):
+    success: bool
+    message: str
+    newStatus: Optional[str] = None
+    timestamp: Optional[str] = None
+
+
+@router.get("/adjudication/dashboard", response_model=AdjudicationDashboardData)
+async def get_adjudication_dashboard() -> AdjudicationDashboardData:
+    """
+    Get complete adjudication dashboard data for PACT Act claims
+    
+    Returns:
+        AdjudicationDashboardData: Complete dashboard with stats, pending, and high priority claims
+    """
+    try:
+        service = ClaimsService()
+        data = await service.get_adjudication_dashboard()
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch adjudication dashboard: {str(e)}")
+
+
+@router.get("/adjudication/stats", response_model=AdjudicatorStats)
+async def get_adjudicator_stats() -> AdjudicatorStats:
+    """
+    Get statistics for the current adjudicator
+    
+    Returns:
+        AdjudicatorStats: Adjudicator performance statistics
+    """
+    try:
+        service = ClaimsService()
+        stats = await service.get_adjudicator_stats()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch adjudicator stats: {str(e)}")
+
+
+@router.get("/adjudication/pending", response_model=List[PendingClaim])
+async def get_pending_claims(limit: int = 50) -> List[PendingClaim]:
+    """
+    Get list of pending claims for adjudication
+    
+    Args:
+        limit: Maximum number of claims to return
+        
+    Returns:
+        List[PendingClaim]: List of pending claims
+    """
+    try:
+        service = ClaimsService()
+        claims = await service.get_pending_claims(limit=limit)
+        return claims
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch pending claims: {str(e)}")
+
+
+@router.get("/adjudication/high-priority", response_model=List[HighPriorityClaim])
+async def get_high_priority_claims(limit: int = 20) -> List[HighPriorityClaim]:
+    """
+    Get high priority claims requiring immediate attention
+    
+    Args:
+        limit: Maximum number of claims to return
+        
+    Returns:
+        List[HighPriorityClaim]: List of high priority claims with AI summaries
+    """
+    try:
+        service = ClaimsService()
+        claims = await service.get_high_priority_claims(limit=limit)
+        return claims
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch high priority claims: {str(e)}")
+
+
+@router.get("/adjudication/pact-act-stats", response_model=PactActStats)
+async def get_pact_act_stats() -> PactActStats:
+    """
+    Get PACT Act specific statistics
+    
+    Returns:
+        PactActStats: PACT Act eligibility and exposure statistics
+    """
+    try:
+        service = ClaimsService()
+        stats = await service.get_pact_act_statistics()
+        return stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch PACT Act stats: {str(e)}")
+
+
+@router.get("/adjudication/claim/{claim_id}", response_model=ClaimDetail)
+async def get_claim_detail(claim_id: str) -> ClaimDetail:
+    """
+    Get detailed information for a specific claim
+    
+    Args:
+        claim_id: The claim ID to fetch details for
+        
+    Returns:
+        ClaimDetail: Full claim details with evidence and history
+    """
+    try:
+        service = ClaimsService()
+        detail = await service.get_claim_detail(claim_id)
+        return detail
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch claim detail: {str(e)}")
+
+
+@router.post("/adjudication/claim/{claim_id}/action", response_model=ClaimActionResponse)
+async def update_claim_status(
+    claim_id: str,
+    action_request: ClaimActionRequest = Body(...)
+) -> ClaimActionResponse:
+    """
+    Update claim status based on adjudicator action
+    
+    Args:
+        claim_id: The claim ID to update
+        action_request: Action details (action, notes, adjudicatorId)
+        
+    Returns:
+        ClaimActionResponse: Success status and new claim status
+    """
+    try:
+        service = ClaimsService()
+        result = await service.update_claim_status(
+            claim_id=claim_id,
+            action=action_request.action,
+            notes=action_request.notes,
+            adjudicator_id=action_request.adjudicatorId
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update claim status: {str(e)}")
+
 
