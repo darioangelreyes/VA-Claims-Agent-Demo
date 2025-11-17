@@ -2,9 +2,13 @@
 Claims Router - Provides endpoints for VA Claims Dashboard
 """
 from fastapi import APIRouter, HTTPException, Body
+from fastapi.responses import StreamingResponse
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from server.services.claims_service import ClaimsService
+import httpx
+import os
+import json
 
 router = APIRouter(prefix="/claims", tags=["claims"])
 
@@ -314,5 +318,73 @@ async def update_claim_status(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update claim status: {str(e)}")
+
+
+class AgentEvaluationRequest(BaseModel):
+    claimant_id: str
+
+
+@router.post("/evaluate-agent")
+async def evaluate_claim_with_agent(request: AgentEvaluationRequest):
+    """
+    Proxy endpoint to call Databricks VBA Claims Agent with streaming
+    """
+    databricks_token = os.getenv('DATABRICKS_TOKEN')
+    if not databricks_token:
+        raise HTTPException(status_code=500, detail="DATABRICKS_TOKEN environment variable not set")
+    endpoint_url = 'https://e2-demo-field-eng.cloud.databricks.com/serving-endpoints/vba_claims_agent/invocations'
+    
+    async def stream_response():
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                # Format for Databricks Agent Framework
+                payload = {
+                    "input": [{
+                        "status": None,
+                        "content": f"Evaluate the eligibility for claimant {request.claimant_id}",
+                        "role": "user",
+                        "type": "message"
+                    }],
+                    "max_output_tokens": 4000,
+                    "stream": True
+                }
+                
+                async with client.stream(
+                    'POST',
+                    endpoint_url,
+                    json=payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {databricks_token}'
+                    }
+                ) as response:
+                    response.raise_for_status()
+                    
+                    async for line in response.aiter_lines():
+                        if line.strip():
+                            # Forward SSE format as-is
+                            yield f"{line}\n"
+        except httpx.HTTPStatusError as e:
+            error_msg = json.dumps({
+                'id': 'error',
+                'content': f'HTTP {e.response.status_code}: {str(e)}'
+            })
+            yield f"data: {error_msg}\n\n"
+        except Exception as e:
+            error_msg = json.dumps({
+                'id': 'error', 
+                'content': f'Error: {str(e)}'
+            })
+            yield f"data: {error_msg}\n\n"
+    
+    return StreamingResponse(
+        stream_response(),
+        media_type='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
 
 
