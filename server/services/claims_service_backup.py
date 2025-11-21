@@ -6,7 +6,6 @@ from typing import List, Dict, Any, Optional
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.sql import StatementState
 from datetime import datetime
-from server.services.hardcoded_claims_data import PRIORITY_CLAIMS_DATA
 
 
 class ClaimsService:
@@ -370,8 +369,42 @@ class ClaimsService:
         except Exception as e:
             print(f"Error fetching pending claims: {e}")
         
-        # Return hardcoded Priority Claims data
-        return PRIORITY_CLAIMS_DATA
+        # Return mock data for demonstration
+        return [
+            {
+                "claimId": "1234567890",
+                "veteranName": "Daniel Johnson",
+                "dateSubmitted": "10/15/2023",
+                "claimedCondition": "Lung Cancer",
+                "currentStatus": "DECISION_READY",
+                "priorityLevel": "HIGH",
+                "fraudScore": 12.5,
+                "complianceScore": 95.0,
+                "isPactAct": True,
+            },
+            {
+                "claimId": "1234567891",
+                "veteranName": "Sarah Williams",
+                "dateSubmitted": "10/14/2023",
+                "claimedCondition": "Respiratory Issues",
+                "currentStatus": "PENDING",
+                "priorityLevel": "MEDIUM",
+                "fraudScore": 8.2,
+                "complianceScore": 88.0,
+                "isPactAct": True,
+            },
+            {
+                "claimId": "1234567892",
+                "veteranName": "Michael Brown",
+                "dateSubmitted": "10/12/2023",
+                "claimedCondition": "Burn Pit Exposure",
+                "currentStatus": "REVIEW_REQUIRED",
+                "priorityLevel": "CRITICAL",
+                "fraudScore": 65.8,
+                "complianceScore": 45.0,
+                "isPactAct": True,
+            },
+        ]
     
     async def get_high_priority_claims(self, limit: int = 20) -> List[Dict[str, Any]]:
         """
@@ -556,53 +589,33 @@ class ClaimsService:
         except Exception as e:
             print(f"Error fetching claim detail: {e}")
         
-        # Find claim in hardcoded data
-        for claim in PRIORITY_CLAIMS_DATA:
-            if claim.get("claimId") == claim_id:
-                return {
-                    "claimId": claim["claimId"],
-                    "veteranName": claim["veteranName"],
-                    "dateSubmitted": claim["dateSubmitted"],
-                    "claimedCondition": claim["claimedCondition"],
-                    "currentStatus": claim["currentStatus"],
-                    "priorityLevel": claim["priorityLevel"],
-                    "fraudScore": claim["fraudScore"],
-                    "fraudReason": claim.get("fraudReason"),
-                    "complianceScore": claim["complianceScore"],
-                    "complianceUpdate": "All required evidence submitted." if claim["complianceScore"] > 80 else "Missing evidence documentation.",
-                    "aiSummary": f"Veteran claim for {claim['claimedCondition']}. Priority: {claim['priorityLevel']}. Status: {claim['currentStatus']}. {'High fraud risk detected.' if claim['fraudScore'] > 30 else 'Standard processing.'}",
-                    "isPactActEligible": claim.get("isPactAct", True),
-                    "exposureType": "Burn Pit" if "Burn Pit" in claim["priorityLevel"] else "Other",
-                    "evidence": {
-                        "serviceRecord": {"status": "COMPLETE", "percentage": 100},
-                        "vaExam": {"status": "COMPLETE" if claim["complianceScore"] > 80 else "PENDING", "percentage": claim["complianceScore"]},
-                        "medicalRecord": {"status": "COMPLETE", "percentage": 90},
-                    },
-                    "presumptiveMatchRate": 74.0,
-                    "history": [
-                        {"date": claim["dateSubmitted"], "action": "Claim Submitted", "user": "System"},
-                        {"date": claim["dateSubmitted"], "action": "Evidence Review Started", "user": "Agent AI"},
-                        {"date": claim["dateSubmitted"], "action": "PACT Act Eligibility Confirmed", "user": "Agent AI"},
-                    ],
-                }
-        
-        # Fallback if claim not found
+        # Return mock data for specific claim
         return {
-            "claimId": claim_id,
-            "veteranName": "Unknown",
-            "dateSubmitted": "Unknown",
-            "claimedCondition": "Unknown",
-            "currentStatus": "NOT_FOUND",
-            "priorityLevel": "UNKNOWN",
-            "fraudScore": 0.0,
+            "claimId": "1234567890",
+            "veteranName": "Daniel Johnson",
+            "dateSubmitted": "10/15/2023",
+            "claimedCondition": "Lung Cancer",
+            "currentStatus": "DECISION_READY",
+            "priorityLevel": "HIGH",
+            "fraudScore": 12.5,
             "fraudReason": None,
-            "complianceScore": 0.0,
-            "complianceUpdate": None,
-            "aiSummary": f"Claim {claim_id} not found in system.",
-            "isPactActEligible": False,
-            "exposureType": "Unknown",
-            "evidence": {},
-            "history": [],
+            "complianceScore": 95.0,
+            "complianceUpdate": "All required evidence submitted. Medical nexus established.",
+            "aiSummary": "Veteran served in Iraq 2006-2007 with documented burn pit exposure. Medical records show lung cancer diagnosis 2023. Strong causal link based on exposure duration and medical evidence.",
+            "isPactActEligible": True,
+            "exposureType": "Burn Pit",
+            "evidence": {
+                "serviceRecord": {"status": "COMPLETE", "percentage": 100},
+                "vaExam": {"status": "COMPLETE", "percentage": 85},
+                "medicalRecord": {"status": "COMPLETE", "percentage": 90},
+            },
+            "presumptiveMatchRate": 74.0,
+            "history": [
+                {"date": "10/15/2023", "action": "Claim Submitted", "user": "System"},
+                {"date": "10/16/2023", "action": "Evidence Review Started", "user": "Agent AI"},
+                {"date": "10/18/2023", "action": "PACT Act Eligibility Confirmed", "user": "Agent AI"},
+                {"date": "10/20/2023", "action": "Status: Decision Ready", "user": "Agent AI"},
+            ],
         }
     
     async def _get_claim_evidence(self, claim_id: str) -> Dict[str, Any]:
