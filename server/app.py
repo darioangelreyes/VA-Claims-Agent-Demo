@@ -25,9 +25,10 @@ def load_env_file(filepath: str) -> None:
             os.environ[key] = value
 
 
-# Load .env files
+# Load .env files (in priority order - later files override earlier ones)
+load_env_file('.databricks.env')  # Synced to Databricks App
 load_env_file('.env')
-load_env_file('.env.local')
+load_env_file('.env.local')  # Local development only (not synced)
 
 
 @asynccontextmanager

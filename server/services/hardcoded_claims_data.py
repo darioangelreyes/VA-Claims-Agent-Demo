@@ -218,5 +218,29 @@ PRIORITY_CLAIMS_DATA = [
         "complianceScore": 81.0,
         "isPactAct": True
     },
+    {
+        "claimId": "CLMT-019192",
+        "veteranName": "Richard A. Thompson",
+        "daysOpen": 63,
+        "dateSubmitted": get_date_from_days_open(63),
+        "claimedCondition": "Lung Cancer",
+        "currentStatus": "Awaiting Evidence",
+        "priorityLevel": "PACT Act - Missing DD214 - Service Validation Required",
+        "fraudScore": 0.2,
+        "complianceScore": 79.0,
+        "isPactAct": True
+    },
+    {
+        "claimId": "CLMT-002310",
+        "veteranName": "Michelle K. Bennett",
+        "daysOpen": 84,
+        "dateSubmitted": get_date_from_days_open(84),
+        "claimedCondition": "Chronic Bronchitis",
+        "currentStatus": "Awaiting Evidence",
+        "priorityLevel": "PACT Act - Missing Medical Records - Exam Required",
+        "fraudScore": 0.06,
+        "complianceScore": 77.0,
+        "isPactAct": True
+    },
 ]
 

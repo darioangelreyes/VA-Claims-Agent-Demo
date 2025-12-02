@@ -109,7 +109,7 @@ const PactActAdjudicationDashboard = () => {
       decisionReady: 28,
       needsEvidence: 30,
     },
-    priorityClaims: 17,
+    priorityClaims: 19,
     priorityClaimsList: [
       { claimId: 'CLMT-005005', veteranName: 'Mary D. Smith', daysOpen: 45, condition: 'Asthma/Rhinitis', status: 'Awaiting Evidence', reason: 'PACT Act - Burn Pit Exposure', fraudScore: 0.12, complianceScore: 87 },
       { claimId: 'CLMT-012512', veteranName: 'John R. Williams', daysOpen: 78, condition: 'Lung Cancer', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.08, complianceScore: 95 },
@@ -128,6 +128,8 @@ const PactActAdjudicationDashboard = () => {
       { claimId: 'CLMT-014268', veteranName: 'Susan R. Lewis', daysOpen: 43, condition: 'Asthma', status: 'Awaiting Evidence', reason: 'PACT Act - Nexus Letter Needed', fraudScore: 0.13, complianceScore: 84 },
       { claimId: 'CLMT-015714', veteranName: 'Charles D. Robinson', daysOpen: 101, condition: 'Lung Cancer', status: 'Decision Ready', reason: 'PACT Act - Over 100 days URGENT', fraudScore: 0.42, complianceScore: 68, fraudReason: 'HIGH RISK: Multiple serious inconsistencies detected. Service dates conflict with deployment records by 6 months. Medical evidence shows possible digital alteration (forensics confidence: 0.78). Veteran previously denied similar claim in 2019, new claim filed immediately after PACT Act with identical medical provider. Pattern matches known fraud ring (4 related cases identified).' },
       { claimId: 'CLMT-014207', veteranName: 'Nancy M. Walker', daysOpen: 69, condition: 'COPD', status: 'Pending Review', reason: 'PACT Act - Complex Medical History', fraudScore: 0.16, complianceScore: 81 },
+      { claimId: 'CLMT-002310', veteranName: 'Michelle K. Bennett', daysOpen: 84, condition: 'Chronic Bronchitis', status: 'Awaiting Evidence', reason: 'PACT Act - Missing Medical Records - Exam Required', fraudScore: 0.0006, complianceScore: 77 },
+      { claimId: 'CLMT-019192', veteranName: 'Richard A. Thompson', daysOpen: 63, condition: 'Lung Cancer', status: 'Awaiting Evidence', reason: 'PACT Act - Missing DD214 - Service Validation Required', fraudScore: 0.002, complianceScore: 79 },
     ],
     allClaimsList: [
       // Priority claims (17 PACT Act claims)
@@ -743,9 +745,27 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     const loadData = async () => {
       setLoading(true);
       try {
-        // const response = await fetch('/api/claims/adjudication/dashboard');
-        // const apiData = await response.json();
-        // setData(apiData);
+        const response = await fetch('/api/claims/adjudication/dashboard');
+        const apiData = await response.json();
+        
+        // Map backend response to frontend format
+        const mappedClaims = apiData.pendingClaims.map((claim: any) => ({
+          claimId: claim.claimId,
+          veteranName: claim.veteranName,
+          daysOpen: claim.daysOpen || 0,
+          condition: claim.claimedCondition,
+          status: claim.currentStatus,
+          reason: claim.priorityLevel,
+          fraudScore: claim.fraudScore / 100, // Convert to 0-1 range
+          complianceScore: claim.complianceScore,
+          fraudReason: claim.fraudReason,
+        }));
+        
+        setData(prev => ({
+          ...prev,
+          priorityClaimsList: mappedClaims,
+          allClaimsList: mappedClaims,
+        }));
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {

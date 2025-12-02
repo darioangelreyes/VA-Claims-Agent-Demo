@@ -294,4 +294,4 @@ mlartifacts/
 .uv/
 
 # Generated client
-client/src/client/
+client/src/client/.databricks.env
