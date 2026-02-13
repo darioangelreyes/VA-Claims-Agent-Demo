@@ -109,27 +109,25 @@ const PactActAdjudicationDashboard = () => {
       decisionReady: 28,
       needsEvidence: 30,
     },
-    priorityClaims: 19,
+    priorityClaims: 17,
     priorityClaimsList: [
-      { claimId: 'CLMT-005005', veteranName: 'Mary D. Smith', daysOpen: 45, condition: 'Asthma/Rhinitis', status: 'Awaiting Evidence', reason: 'PACT Act - Burn Pit Exposure', fraudScore: 0.12, complianceScore: 87 },
-      { claimId: 'CLMT-012512', veteranName: 'John R. Williams', daysOpen: 78, condition: 'Lung Cancer', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.08, complianceScore: 95 },
-      { claimId: 'CLMT-015120', veteranName: 'Sarah M. Johnson', daysOpen: 92, condition: 'Chronic Bronchitis', status: 'Pending Review', reason: 'PACT Act - Over 90 days CRITICAL', fraudScore: 0.15, complianceScore: 82 },
-      { claimId: 'CLMT-014618', veteranName: 'Michael P. Davis', daysOpen: 67, condition: 'Sleep Apnea', status: 'Decision Ready', reason: 'PACT Act - Respiratory Issues', fraudScore: 0.05, complianceScore: 92 },
-      { claimId: 'CLMT-003116', veteranName: 'Jennifer L. Martinez', daysOpen: 55, condition: 'Sinusitis', status: 'Awaiting Evidence', reason: 'PACT Act - Missing VA Exam', fraudScore: 0.18, complianceScore: 78 },
-      { claimId: 'CLMT-008261', veteranName: 'Robert T. Anderson', daysOpen: 83, condition: 'COPD', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.22, complianceScore: 88, fraudReason: 'Minor inconsistencies in deployment timeline. Service dates show 8-month deployment, but medical records reference 12-month exposure period.' },
-      { claimId: 'CLMT-010139', veteranName: 'Lisa K. Thompson', daysOpen: 72, condition: 'Lung Disease', status: 'Pending Review', reason: 'PACT Act - Complex Case', fraudScore: 0.35, complianceScore: 72, fraudReason: 'Multiple red flags detected: Service records show non-combat MOS with limited field exposure. Medical evidence timing questionable - condition diagnosed 2 weeks after PACT Act announcement. Similar claim pattern detected from same medical provider.' },
-      { claimId: 'CLMT-011243', veteranName: 'David S. Wilson', daysOpen: 48, condition: 'Asthma', status: 'Awaiting Evidence', reason: 'PACT Act - Service Records Needed', fraudScore: 0.09, complianceScore: 90 },
-      { claimId: 'CLMT-013341', veteranName: 'Patricia A. Moore', daysOpen: 95, condition: 'Emphysema', status: 'Decision Ready', reason: 'PACT Act - Over 90 days CRITICAL', fraudScore: 0.11, complianceScore: 85 },
-      { claimId: 'CLMT-013630', veteranName: 'James B. Taylor', daysOpen: 61, condition: 'Chronic Cough', status: 'Pending Review', reason: 'PACT Act - Burn Pit Exposure', fraudScore: 0.28, complianceScore: 79, fraudReason: 'Deployment records incomplete. Unit assignment documentation shows primarily stateside duty, but claim asserts 18 months burn pit exposure. Medical provider has history of PACT Act claims with questionable documentation.' },
-      { claimId: 'CLMT-014204', veteranName: 'Linda C. Jackson', daysOpen: 58, condition: 'Respiratory Issues', status: 'Awaiting Evidence', reason: 'PACT Act - Medical Records Needed', fraudScore: 0.14, complianceScore: 83 },
-      { claimId: 'CLMT-014186', veteranName: 'William H. White', daysOpen: 88, condition: 'Lung Scarring', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.19, complianceScore: 86 },
-      { claimId: 'CLMT-014597', veteranName: 'Barbara E. Harris', daysOpen: 52, condition: 'Sinusitis', status: 'Pending Review', reason: 'PACT Act - Deployment Verification', fraudScore: 0.07, complianceScore: 91 },
-      { claimId: 'CLMT-008700', veteranName: 'Thomas G. Clark', daysOpen: 76, condition: 'Sleep Apnea', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.10, complianceScore: 89 },
-      { claimId: 'CLMT-014268', veteranName: 'Susan R. Lewis', daysOpen: 43, condition: 'Asthma', status: 'Awaiting Evidence', reason: 'PACT Act - Nexus Letter Needed', fraudScore: 0.13, complianceScore: 84 },
-      { claimId: 'CLMT-015714', veteranName: 'Charles D. Robinson', daysOpen: 101, condition: 'Lung Cancer', status: 'Decision Ready', reason: 'PACT Act - Over 100 days URGENT', fraudScore: 0.42, complianceScore: 68, fraudReason: 'HIGH RISK: Multiple serious inconsistencies detected. Service dates conflict with deployment records by 6 months. Medical evidence shows possible digital alteration (forensics confidence: 0.78). Veteran previously denied similar claim in 2019, new claim filed immediately after PACT Act with identical medical provider. Pattern matches known fraud ring (4 related cases identified).' },
-      { claimId: 'CLMT-014207', veteranName: 'Nancy M. Walker', daysOpen: 69, condition: 'COPD', status: 'Pending Review', reason: 'PACT Act - Complex Medical History', fraudScore: 0.16, complianceScore: 81 },
-      { claimId: 'CLMT-002310', veteranName: 'Michelle K. Bennett', daysOpen: 84, condition: 'Chronic Bronchitis', status: 'Awaiting Evidence', reason: 'PACT Act - Missing Medical Records - Exam Required', fraudScore: 0.0006, complianceScore: 77 },
-      { claimId: 'CLMT-019192', veteranName: 'Richard A. Thompson', daysOpen: 63, condition: 'Lung Cancer', status: 'Awaiting Evidence', reason: 'PACT Act - Missing DD214 - Service Validation Required', fraudScore: 0.002, complianceScore: 79 },
+      { claimId: '123455709', veteranName: 'Mary D. Smith', daysOpen: 45, condition: 'Asthma/Rhinitis', status: 'Awaiting Evidence', reason: 'PACT Act - Burn Pit Exposure', fraudScore: 0.12, complianceScore: 87 },
+      { claimId: '987654321', veteranName: 'John R. Williams', daysOpen: 78, condition: 'Lung Cancer', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.08, complianceScore: 95 },
+      { claimId: '456789123', veteranName: 'Sarah M. Johnson', daysOpen: 92, condition: 'Chronic Bronchitis', status: 'Pending Review', reason: 'PACT Act - Over 90 days CRITICAL', fraudScore: 0.15, complianceScore: 82 },
+      { claimId: '789123456', veteranName: 'Michael P. Davis', daysOpen: 67, condition: 'Sleep Apnea', status: 'Decision Ready', reason: 'PACT Act - Respiratory Issues', fraudScore: 0.05, complianceScore: 92 },
+      { claimId: '321654987', veteranName: 'Jennifer L. Martinez', daysOpen: 55, condition: 'Sinusitis', status: 'Awaiting Evidence', reason: 'PACT Act - Missing VA Exam', fraudScore: 0.18, complianceScore: 78 },
+      { claimId: '654321789', veteranName: 'Robert T. Anderson', daysOpen: 83, condition: 'COPD', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.22, complianceScore: 88, fraudReason: 'Minor inconsistencies in deployment timeline. Service dates show 8-month deployment, but medical records reference 12-month exposure period.' },
+      { claimId: '147258369', veteranName: 'Lisa K. Thompson', daysOpen: 72, condition: 'Lung Disease', status: 'Pending Review', reason: 'PACT Act - Complex Case', fraudScore: 0.35, complianceScore: 72, fraudReason: 'Multiple red flags detected: Service records show non-combat MOS with limited field exposure. Medical evidence timing questionable - condition diagnosed 2 weeks after PACT Act announcement. Similar claim pattern detected from same medical provider.' },
+      { claimId: '369258147', veteranName: 'David S. Wilson', daysOpen: 48, condition: 'Asthma', status: 'Awaiting Evidence', reason: 'PACT Act - Service Records Needed', fraudScore: 0.09, complianceScore: 90 },
+      { claimId: '258147369', veteranName: 'Patricia A. Moore', daysOpen: 95, condition: 'Emphysema', status: 'Decision Ready', reason: 'PACT Act - Over 90 days CRITICAL', fraudScore: 0.11, complianceScore: 85 },
+      { claimId: '741852963', veteranName: 'James B. Taylor', daysOpen: 61, condition: 'Chronic Cough', status: 'Pending Review', reason: 'PACT Act - Burn Pit Exposure', fraudScore: 0.28, complianceScore: 79, fraudReason: 'Deployment records incomplete. Unit assignment documentation shows primarily stateside duty, but claim asserts 18 months burn pit exposure. Medical provider has history of PACT Act claims with questionable documentation.' },
+      { claimId: '852963741', veteranName: 'Linda C. Jackson', daysOpen: 58, condition: 'Respiratory Issues', status: 'Awaiting Evidence', reason: 'PACT Act - Medical Records Needed', fraudScore: 0.14, complianceScore: 83 },
+      { claimId: '963852741', veteranName: 'William H. White', daysOpen: 88, condition: 'Lung Scarring', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.19, complianceScore: 86 },
+      { claimId: '159357486', veteranName: 'Barbara E. Harris', daysOpen: 52, condition: 'Sinusitis', status: 'Pending Review', reason: 'PACT Act - Deployment Verification', fraudScore: 0.07, complianceScore: 91 },
+      { claimId: '357159486', veteranName: 'Thomas G. Clark', daysOpen: 76, condition: 'Sleep Apnea', status: 'Decision Ready', reason: 'PACT Act - Over 60 days', fraudScore: 0.10, complianceScore: 89 },
+      { claimId: '486159357', veteranName: 'Susan R. Lewis', daysOpen: 43, condition: 'Asthma', status: 'Awaiting Evidence', reason: 'PACT Act - Nexus Letter Needed', fraudScore: 0.13, complianceScore: 84 },
+      { claimId: '789456123', veteranName: 'Charles D. Robinson', daysOpen: 101, condition: 'Lung Cancer', status: 'Decision Ready', reason: 'PACT Act - Over 100 days URGENT', fraudScore: 0.42, complianceScore: 68, fraudReason: 'HIGH RISK: Multiple serious inconsistencies detected. Service dates conflict with deployment records by 6 months. Medical evidence shows possible digital alteration (forensics confidence: 0.78). Veteran previously denied similar claim in 2019, new claim filed immediately after PACT Act with identical medical provider. Pattern matches known fraud ring (4 related cases identified).' },
+      { claimId: '456123789', veteranName: 'Nancy M. Walker', daysOpen: 69, condition: 'COPD', status: 'Pending Review', reason: 'PACT Act - Complex Medical History', fraudScore: 0.16, complianceScore: 81 },
     ],
     allClaimsList: [
       // Priority claims (17 PACT Act claims)
@@ -320,9 +318,10 @@ const PactActAdjudicationDashboard = () => {
     setAgentSteps([]);
     setShowEvaluation(true);
 
-    // Use REAL API call to Databricks Agent
+    // NOTE: Using mock agent response for demo purposes since database IDs don't match UI claims
+    // Simulating realistic agent workflow with function calls and analysis
     try {
-      await handleEvaluateClaimReal();
+      await simulateAgentEvaluation();
     } catch (error) {
       console.error('Error in agent evaluation:', error);
       setEvaluationChunks([{ 
@@ -745,27 +744,9 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     const loadData = async () => {
       setLoading(true);
       try {
-        const response = await fetch('/api/claims/adjudication/dashboard');
-        const apiData = await response.json();
-        
-        // Map backend response to frontend format
-        const mappedClaims = apiData.pendingClaims.map((claim: any) => ({
-          claimId: claim.claimId,
-          veteranName: claim.veteranName,
-          daysOpen: claim.daysOpen || 0,
-          condition: claim.claimedCondition,
-          status: claim.currentStatus,
-          reason: claim.priorityLevel,
-          fraudScore: claim.fraudScore / 100, // Convert to 0-1 range
-          complianceScore: claim.complianceScore,
-          fraudReason: claim.fraudReason,
-        }));
-        
-        setData(prev => ({
-          ...prev,
-          priorityClaimsList: mappedClaims,
-          allClaimsList: mappedClaims,
-        }));
+        // const response = await fetch('/api/claims/adjudication/dashboard');
+        // const apiData = await response.json();
+        // setData(apiData);
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
@@ -920,13 +901,13 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <div className="bg-[#0f3057] text-white shadow-lg">
+      <div className="bg-[#09234c] text-white shadow-lg">
         <div className="max-w-[1600px] mx-auto px-8 py-6 flex items-center justify-between">
           <h1 className="text-3xl font-bold tracking-wide">CLAIMS ADJUDICATION DASHBOARD</h1>
           <div className="flex items-center gap-4">
             {/* VA Logo */}
             <img 
-              src="/va-logo.png" 
+              src="https://media.defense.gov/2020/Jul/17/2002459063/1920/1080/0/200717-D-OH989-0001.JPG" 
               alt="U.S. Department of Veterans Affairs" 
               className="h-20 w-auto"
             />

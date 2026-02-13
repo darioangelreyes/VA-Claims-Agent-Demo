@@ -6,8 +6,6 @@ from fastapi.responses import StreamingResponse
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from server.services.claims_service import ClaimsService
-from databricks.sdk import WorkspaceClient
-from databricks.sdk.core import Config
 import httpx
 import os
 import json
@@ -112,7 +110,6 @@ class AdjudicatorStats(BaseModel):
 class PendingClaim(BaseModel):
     claimId: str
     veteranName: str
-    daysOpen: Optional[int] = 0
     dateSubmitted: str
     claimedCondition: str
     currentStatus: str
@@ -327,144 +324,67 @@ class AgentEvaluationRequest(BaseModel):
     claimant_id: str
 
 
-@router.get("/debug/env")
-async def debug_environment():
-    """
-    Debug endpoint to check available environment variables (development only)
-    """
-    # Only show this in non-production or for debugging
-    databricks_vars = {k: ('***' if 'TOKEN' in k or 'SECRET' in k else v) 
-                       for k, v in os.environ.items() 
-                       if 'DATABRICKS' in k.upper()}
-    
-    has_sdk = False
-    sdk_error = None
-    try:
-        from databricks.sdk import WorkspaceClient
-        w = WorkspaceClient()
-        has_sdk = True
-        has_token = hasattr(w.config, 'token') and w.config.token is not None
-    except Exception as e:
-        sdk_error = str(e)
-        has_token = False
-    
-    return {
-        "databricks_env_vars": list(databricks_vars.keys()),
-        "has_databricks_token_env": "DATABRICKS_TOKEN" in os.environ,
-        "has_databricks_host_env": "DATABRICKS_HOST" in os.environ,
-        "sdk_available": has_sdk,
-        "sdk_has_token": has_token if has_sdk else None,
-        "sdk_error": sdk_error
-    }
-
-
 @router.post("/evaluate-agent")
 async def evaluate_claim_with_agent(request: AgentEvaluationRequest):
     """
     Proxy endpoint to call Databricks VBA Claims Agent with streaming
-    Uses multiple authentication strategies for compatibility
     """
-    try:
-        # Strategy 1: Try environment variables (local development)
-        databricks_host = os.getenv('DATABRICKS_HOST', 'https://e2-demo-field-eng.cloud.databricks.com')
-        databricks_token = os.getenv('DATABRICKS_TOKEN')
-        
-        # Strategy 2: Try Databricks App environment variables
-        if not databricks_token:
-            # Databricks Apps may provide DATABRICKS_TOKEN automatically
-            databricks_token = os.getenv('DATABRICKS_TOKEN')
-        
-        # Strategy 3: Try to use SDK (may work in some Databricks App contexts)
-        if not databricks_token:
-            try:
-                from databricks.sdk import WorkspaceClient
-                w = WorkspaceClient()
-                if hasattr(w.config, 'token') and w.config.token:
-                    databricks_token = w.config.token
-            except Exception as e:
-                print(f"SDK authentication attempt failed: {e}")
-        
-        # Strategy 4: Check for service principal env vars (Databricks Apps with SP)
-        if not databricks_token:
-            client_id = os.getenv('DATABRICKS_CLIENT_ID')
-            client_secret = os.getenv('DATABRICKS_CLIENT_SECRET')
-            if client_id and client_secret:
-                # For OAuth M2M flow, we'd need to exchange for a token
-                # This is complex, so for now we'll fail with a better error
-                raise HTTPException(
-                    status_code=500,
-                    detail="Service principal authentication detected but not yet implemented. Please configure DATABRICKS_TOKEN."
-                )
-        
-        if not databricks_token:
-            # Check what env vars are available for debugging
-            available_vars = [k for k in os.environ.keys() if 'DATABRICKS' in k.upper()]
-            raise HTTPException(
-                status_code=500,
-                detail=f"No authentication token available. Found env vars: {available_vars}"
-            )
-        
-        # Clean up host URL
-        if '?' in databricks_host:
-            databricks_host = databricks_host.split('?')[0]
-        
-        endpoint_url = f'{databricks_host}/serving-endpoints/vba_claims_agent/invocations'
-        
-        async def stream_response():
-            try:
-                async with httpx.AsyncClient(timeout=120.0) as client:
-                    # Format for Databricks Agent Framework
-                    payload = {
-                        "input": [{
-                            "status": None,
-                            "content": f"Evaluate the eligibility for claimant {request.claimant_id}",
-                            "role": "user",
-                            "type": "message"
-                        }],
-                        "max_output_tokens": 4000,
-                        "stream": True
+    databricks_token = os.getenv('DATABRICKS_TOKEN')
+    if not databricks_token:
+        raise HTTPException(status_code=500, detail="DATABRICKS_TOKEN environment variable not set")
+    endpoint_url = 'https://e2-demo-field-eng.cloud.databricks.com/serving-endpoints/vba_claims_agent/invocations'
+    
+    async def stream_response():
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                # Format for Databricks Agent Framework
+                payload = {
+                    "input": [{
+                        "status": None,
+                        "content": f"Evaluate the eligibility for claimant {request.claimant_id}",
+                        "role": "user",
+                        "type": "message"
+                    }],
+                    "max_output_tokens": 4000,
+                    "stream": True
+                }
+                
+                async with client.stream(
+                    'POST',
+                    endpoint_url,
+                    json=payload,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Authorization': f'Bearer {databricks_token}'
                     }
+                ) as response:
+                    response.raise_for_status()
                     
-                    async with client.stream(
-                        'POST',
-                        endpoint_url,
-                        json=payload,
-                        headers={
-                            'Content-Type': 'application/json',
-                            'Authorization': f'Bearer {databricks_token}'
-                        }
-                    ) as response:
-                        response.raise_for_status()
-                        
-                        async for line in response.aiter_lines():
-                            if line.strip():
-                                # Forward SSE format as-is
-                                yield f"{line}\n"
-            except httpx.HTTPStatusError as e:
-                error_msg = json.dumps({
-                    'id': 'error',
-                    'content': f'HTTP {e.response.status_code}: {str(e)}'
-                })
-                yield f"data: {error_msg}\n\n"
-            except Exception as e:
-                error_msg = json.dumps({
-                    'id': 'error', 
-                    'content': f'Error: {str(e)}'
-                })
-                yield f"data: {error_msg}\n\n"
-        
-        return StreamingResponse(
-            stream_response(),
-            media_type='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'
-            }
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initialize agent call: {str(e)}")
+                    async for line in response.aiter_lines():
+                        if line.strip():
+                            # Forward SSE format as-is
+                            yield f"{line}\n"
+        except httpx.HTTPStatusError as e:
+            error_msg = json.dumps({
+                'id': 'error',
+                'content': f'HTTP {e.response.status_code}: {str(e)}'
+            })
+            yield f"data: {error_msg}\n\n"
+        except Exception as e:
+            error_msg = json.dumps({
+                'id': 'error', 
+                'content': f'Error: {str(e)}'
+            })
+            yield f"data: {error_msg}\n\n"
+    
+    return StreamingResponse(
+        stream_response(),
+        media_type='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
 
 

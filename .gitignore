@@ -246,6 +246,10 @@ dist
 .cache/
 public
 
+# Allow client public assets (e.g. VA logo) for Vite
+!client/public
+!client/public/**
+
 # Vite build output
 dist
 dist-ssr
