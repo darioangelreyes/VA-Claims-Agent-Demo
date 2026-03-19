@@ -15,12 +15,23 @@ Frontend (React)
     ↓
 Backend (FastAPI)
     ↓
-    SQL Query to: wittprojects.vba_claims_agent.gold_adjudication_reports
+    SQL Query to: va_claims_ai.vba_claims_agent.gold_adjudication_reports
     ↓
     Returns data OR falls back to mock data if table doesn't exist
     ↓
 Frontend displays data in Priority Claims table
 ```
+
+### Unity Catalog names (environment variables)
+
+The backend resolves tables as `{catalog}.{schema}`. Defaults match the **VA Claims AI** Unity Catalog naming convention:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABRICKS_UC_CATALOG` | `va_claims_ai` | Unity Catalog name |
+| `DATABRICKS_UC_SCHEMA` | `vba_claims_agent` | Schema within the catalog |
+
+Set these in `.env.local` if your workspace uses different names.
 
 ---
 
@@ -78,7 +89,7 @@ The frontend transforms API data to match UI requirements:
 
 ## Backend Data Source
 
-**Primary Table**: `wittprojects.vba_claims_agent.gold_adjudication_reports`
+**Primary Table**: `va_claims_ai.vba_claims_agent.gold_adjudication_reports`
 
 **SQL Query** (from `claims_service.py`):
 ```sql
@@ -91,7 +102,7 @@ SELECT
     priority_level,
     fraud_score,
     compliance_score
-FROM wittprojects.vba_claims_agent.gold_adjudication_reports
+FROM va_claims_ai.vba_claims_agent.gold_adjudication_reports
 WHERE current_status IN ('PENDING', 'DECISION_READY', 'REVIEW_REQUIRED', 'AWAITING_EVIDENCE')
 ORDER BY 
     CASE priority_level 
@@ -124,7 +135,7 @@ LIMIT 50
 
 ### 1. Check if table exists in Databricks:
 ```sql
-SELECT * FROM wittprojects.vba_claims_agent.gold_adjudication_reports LIMIT 5;
+SELECT * FROM va_claims_ai.vba_claims_agent.gold_adjudication_reports LIMIT 5;
 ```
 
 ### 2. Check backend API response:
@@ -148,7 +159,7 @@ If returns **> 3** → Using real data from table
 For real data to work, `gold_adjudication_reports` needs these columns:
 
 ```sql
-CREATE TABLE wittprojects.vba_claims_agent.gold_adjudication_reports (
+CREATE TABLE va_claims_ai.vba_claims_agent.gold_adjudication_reports (
     claim_id STRING,
     veteran_id STRING,
     veteran_name STRING,
@@ -176,7 +187,7 @@ CREATE TABLE wittprojects.vba_claims_agent.gold_adjudication_reports (
 1. **Check if table exists** in your workspace
 2. **Populate table** with real or sample data
 3. **Refresh frontend** - it will automatically pull from table
-4. **Test agent evaluation** with real claim IDs
+4. **Test agent evaluation** with real claim IDs — set `DATABRICKS_SERVING_ENDPOINT_URL` if your Model Serving host or endpoint name differs from the default in [server/routers/claims.py](server/routers/claims.py).
 
 ---
 

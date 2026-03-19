@@ -17,7 +17,9 @@ class ClaimsService:
             token=os.getenv("DATABRICKS_TOKEN")
         )
         self._warehouse_id = None
-        self.schema = "wittprojects.vba_claims_agent"
+        catalog = os.getenv("DATABRICKS_UC_CATALOG", "va_claims_ai")
+        schema_name = os.getenv("DATABRICKS_UC_SCHEMA", "vba_claims_agent")
+        self.schema = f"{catalog}.{schema_name}"
     
     async def _get_warehouse_id(self) -> str:
         """Get the first available SQL warehouse ID"""

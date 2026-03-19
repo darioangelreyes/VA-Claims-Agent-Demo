@@ -1,10 +1,22 @@
-# Wittprojects Schema - Required Tables
+# VA Claims AI catalog – Required Tables
 
-All data for the VA Claims Dashboard now pulls from `wittprojects.vba_claims_agent` schema.
+## Unity Catalog migration note
+
+If you previously used the **`wittprojects`** catalog, migrate or recreate objects under **`va_claims_ai`** (recommended UC identifier for “VA Claims AI”):
+
+| Legacy (example) | Current default |
+|------------------|-----------------|
+| `wittprojects.vba_claims_agent.*` | `va_claims_ai.vba_claims_agent.*` |
+
+Typical steps: create catalog `va_claims_ai` (with appropriate grants), copy or rebuild tables into schema `vba_claims_agent`, then update app env vars if you use non-default names. The FastAPI app reads **`DATABRICKS_UC_CATALOG`** and **`DATABRICKS_UC_SCHEMA`** (defaults above). See [API_DATA_FLOW.md](API_DATA_FLOW.md).
+
+---
+
+All data for the VA Claims Dashboard pulls from `va_claims_ai.vba_claims_agent` schema by default.
 
 ## Required Tables
 
-### 1. `wittprojects.vba_claims_agent.claims`
+### 1. `va_claims_ai.vba_claims_agent.claims`
 **Purpose**: Main claims data for both dashboards
 
 **Required Columns**:
@@ -31,7 +43,7 @@ All data for the VA Claims Dashboard now pulls from `wittprojects.vba_claims_age
 
 ---
 
-### 2. `wittprojects.vba_claims_agent.claims_metrics`
+### 2. `va_claims_ai.vba_claims_agent.claims_metrics`
 **Purpose**: Aggregated metrics for dashboard KPIs
 
 **Required Columns**:
@@ -47,7 +59,7 @@ All data for the VA Claims Dashboard now pulls from `wittprojects.vba_claims_age
 
 ---
 
-### 3. `wittprojects.vba_claims_agent.provider_delays`
+### 3. `va_claims_ai.vba_claims_agent.provider_delays`
 **Purpose**: Provider performance and regional delay data
 
 **Required Columns**:
@@ -62,7 +74,7 @@ All data for the VA Claims Dashboard now pulls from `wittprojects.vba_claims_age
 
 ---
 
-### 4. `wittprojects.vba_claims_agent.claim_evidence`
+### 4. `va_claims_ai.vba_claims_agent.claim_evidence`
 **Purpose**: Evidence tracking for individual claims
 
 **Required Columns**:
@@ -76,7 +88,7 @@ All data for the VA Claims Dashboard now pulls from `wittprojects.vba_claims_age
 
 ---
 
-### 5. `wittprojects.vba_claims_agent.claim_history`
+### 5. `va_claims_ai.vba_claims_agent.claim_history`
 **Purpose**: Audit trail of claim actions
 
 **Required Columns**:
@@ -99,7 +111,7 @@ ahunt_demo.generatorclaims.silver_claims_events
 ahunt_demo.generatorclaims.gold_provider_experience_daily
 ```
 
-### After (wittprojects schema):
+### Intermediate (legacy Wittprojects catalog):
 ```
 wittprojects.vba_claims_agent.claims
 wittprojects.vba_claims_agent.claims_metrics
@@ -108,35 +120,43 @@ wittprojects.vba_claims_agent.claim_evidence
 wittprojects.vba_claims_agent.claim_history
 ```
 
+### After (VA Claims AI catalog – default app configuration):
+```
+va_claims_ai.vba_claims_agent.claims
+va_claims_ai.vba_claims_agent.claims_metrics
+va_claims_ai.vba_claims_agent.provider_delays
+va_claims_ai.vba_claims_agent.claim_evidence
+va_claims_ai.vba_claims_agent.claim_history
+```
+
 ---
 
 ## Sample Data Queries
 
 ### Check if tables exist:
 ```sql
-SHOW TABLES IN wittprojects.vba_claims_agent;
+SHOW TABLES IN va_claims_ai.vba_claims_agent;
 ```
 
 ### Check claims table structure:
 ```sql
-DESCRIBE wittprojects.vba_claims_agent.claims;
+DESCRIBE va_claims_ai.vba_claims_agent.claims;
 ```
 
 ### Count records:
 ```sql
-SELECT COUNT(*) FROM wittprojects.vba_claims_agent.claims;
-SELECT COUNT(*) FROM wittprojects.vba_claims_agent.claims_metrics;
-SELECT COUNT(*) FROM wittprojects.vba_claims_agent.provider_delays;
-SELECT COUNT(*) FROM wittprojects.vba_claims_agent.claim_evidence;
-SELECT COUNT(*) FROM wittprojects.vba_claims_agent.claim_history;
+SELECT COUNT(*) FROM va_claims_ai.vba_claims_agent.claims;
+SELECT COUNT(*) FROM va_claims_ai.vba_claims_agent.claims_metrics;
+SELECT COUNT(*) FROM va_claims_ai.vba_claims_agent.provider_delays;
+SELECT COUNT(*) FROM va_claims_ai.vba_claims_agent.claim_evidence;
+SELECT COUNT(*) FROM va_claims_ai.vba_claims_agent.claim_history;
 ```
 
 ---
 
 ## Notes
 
-- All queries now use `wittprojects.vba_claims_agent` schema
+- All queries use `{DATABRICKS_UC_CATALOG}.{DATABRICKS_UC_SCHEMA}` (defaults: `va_claims_ai.vba_claims_agent`)
 - If tables don't exist or queries fail, the app will fall back to mock data
 - The mock data ensures the UI works even during development/testing
 - Column names have been standardized across all queries
-
