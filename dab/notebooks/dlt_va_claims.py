@@ -3,8 +3,9 @@
 # MAGIC # VA Claims Agent — Medallion SDP (bronze / silver / gold)
 # MAGIC Synthetic VA claims + interoperability-flavored fields (FHIR, ICD-10, LOINC, SNOMED, Cerner/VistA-style, C-CDA refs).
 # MAGIC Catalog and schema come from the pipeline Unity Catalog settings (bundle `catalog` + `target`).
+# MAGIC Uses `pyspark.pipelines` (`dp`) for Lakeflow SDP / serverless; legacy `dlt` is not registered there.
 
-import dlt
+from pyspark import pipelines as dp
 import pyspark.sql.functions as F
 from pyspark.sql.types import (
     StructType,
@@ -22,7 +23,7 @@ from pyspark.sql.types import (
 # -----------------------------------------------------------------------------
 
 
-@dlt.table(comment="Cerner-style flat claim line extract (synthetic)")
+@dp.materialized_view(comment="Cerner-style flat claim line extract (synthetic)")
 def bronze_cerner_claim_extract():
     rows = []
     conditions = [
@@ -82,7 +83,7 @@ def bronze_cerner_claim_extract():
     return spark.createDataFrame(rows, schema)
 
 
-@dlt.table(comment="VistA-inspired event rows (synthetic IDs only)")
+@dp.materialized_view(comment="VistA-inspired event rows (synthetic IDs only)")
 def bronze_vista_event():
     rows = []
     for i in range(80):
@@ -109,7 +110,7 @@ def bronze_vista_event():
     return spark.createDataFrame(rows, sch)
 
 
-@dlt.table(comment="FHIR R4 bundle fragment as JSON text (Patient + Condition refs)")
+@dp.materialized_view(comment="FHIR R4 bundle fragment as JSON text (Patient + Condition refs)")
 def bronze_fhir_bundle():
     rows = []
     for i in range(100):
@@ -130,7 +131,7 @@ def bronze_fhir_bundle():
     return spark.createDataFrame(rows, StructType([StructField("bundle_id", StringType()), StructField("raw_json", StringType())]))
 
 
-@dlt.table(comment="C-CDA document manifest (synthetic pointers)")
+@dp.materialized_view(comment="C-CDA document manifest (synthetic pointers)")
 def bronze_ccda_manifest():
     rows = []
     for i in range(60):
@@ -160,7 +161,7 @@ def bronze_ccda_manifest():
 # -----------------------------------------------------------------------------
 
 
-@dlt.table(comment="ICD-10-CM subset for demo (not a licensed full distribution)")
+@dp.materialized_view(comment="ICD-10-CM subset for demo (not a licensed full distribution)")
 def silver_dim_icd10():
     codes = [
         ("J44.1", "Chronic obstructive pulmonary disease with acute exacerbation"),
@@ -182,7 +183,7 @@ def silver_dim_icd10():
     )
 
 
-@dlt.table(comment="LOINC subset (illustrative)")
+@dp.materialized_view(comment="LOINC subset (illustrative)")
 def silver_dim_loinc():
     rows = [
         ("8867-4", "Heart rate", "clinical"),
@@ -202,7 +203,7 @@ def silver_dim_loinc():
     )
 
 
-@dlt.table(comment="SNOMED CT URI pattern subset (illustrative)")
+@dp.materialized_view(comment="SNOMED CT URI pattern subset (illustrative)")
 def silver_dim_snomed():
     rows = [
         ("13645005", "Chronic obstructive lung disease", "http://snomed.info/sct"),
@@ -222,7 +223,7 @@ def silver_dim_snomed():
     )
 
 
-@dlt.table(comment="Observation facts with LOINC (synthetic)")
+@dp.materialized_view(comment="Observation facts with LOINC (synthetic)")
 def silver_observation_loinc():
     rows = []
     loincs = ["8867-4", "8480-6", "72166-2", "33747-0"]
@@ -250,7 +251,7 @@ def silver_observation_loinc():
     )
 
 
-@dlt.table(comment="VA / PACT policy text chunks for SQL retrieval (no Vector Search)")
+@dp.materialized_view(comment="VA / PACT policy text chunks for SQL retrieval (no Vector Search)")
 def silver_va_doc_chunk():
     chunks = [
         (
@@ -298,12 +299,12 @@ def silver_va_doc_chunk():
 # -----------------------------------------------------------------------------
 
 
-@dlt.table(
+@dp.materialized_view(
     name="claims",
     comment="Gold claims for VA Claims Dashboard + PACT adjudication API",
 )
 def gold_claims():
-    b = dlt.read("bronze_cerner_claim_extract")
+    b = spark.table("bronze_cerner_claim_extract")
     return b.select(
         F.col("cerner_claim_id").alias("claim_id"),
         F.concat(F.lit("Veteran "), F.col("patient_mrn")).alias("veteran_name"),
@@ -334,9 +335,9 @@ def gold_claims():
     )
 
 
-@dlt.table(comment="Evidence rows per claim (synthetic)")
+@dp.materialized_view(comment="Evidence rows per claim (synthetic)")
 def claim_evidence():
-    c = dlt.read("claims").select("claim_id").limit(200)
+    c = spark.table("claims").select("claim_id").limit(200)
     ev_arr = F.array(
         F.lit("serviceRecord"),
         F.lit("vaExam"),
@@ -351,15 +352,18 @@ def claim_evidence():
             F.array(F.lit("COMPLETE"), F.lit("PENDING"), F.lit("INCOMPLETE")),
             (F.abs(F.hash(F.col("claim_id"), F.col("evidence_type"))) % 3 + 1).cast("int"),
         ).alias("status"),
-        (F.lit(70.0) + (F.abs(F.hash(F.col("evidence_type"))) % F.lit(30)).cast(DoubleType()).alias(
-            "completeness_score"
+        (
+            F.lit(70.0)
+            + (F.abs(F.hash(F.col("evidence_type"))) % F.lit(30)).cast(DoubleType()).alias(
+                "completeness_score"
+            )
         ),
     )
 
 
-@dlt.table(comment="Claim history timeline (synthetic)")
+@dp.materialized_view(comment="Claim history timeline (synthetic)")
 def claim_history():
-    c = dlt.read("claims").select("claim_id", "date_submitted").limit(150)
+    c = spark.table("claims").select("claim_id", "date_submitted").limit(150)
     act_rows = [
         ("09:00:00", "Claim Submitted", "System"),
         ("10:15:00", "Evidence Review Started", "Agent"),
@@ -382,20 +386,20 @@ def claim_history():
     )
 
 
-@dlt.table(
+@dp.materialized_view(
     name="gold_adjudication_reports",
     comment="Alias of claims for analytics / legacy SQL examples",
 )
 def gold_adjudication_reports():
-    return dlt.read("claims")
+    return spark.table("claims")
 
 
-@dlt.table(
+@dp.materialized_view(
     name="gold_claims_timeseries",
     comment="Weekly aggregates for dashboard trends",
 )
 def gold_claims_timeseries():
-    c = dlt.read("claims")
+    c = spark.table("claims")
     return (
         c.withColumn("week_start", F.date_trunc("week", F.col("date_submitted")))
         .groupBy("week_start", "current_status")

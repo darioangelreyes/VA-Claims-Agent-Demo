@@ -22,12 +22,38 @@ Optional:
 
 ## 2. Deploy the Asset Bundle (data plane)
 
+### Verify locally (no Databricks credentials)
+
+From the **repository root**, run the static checker on the SDP notebook (syntax, no legacy `dlt`, `spark.table` names resolve to defined datasets):
+
+```bash
+uv run python scripts/validate_va_claims_sdp_notebook.py
+```
+
+### Deploy
+
 From the **repository root**:
 
 ```bash
 databricks bundle validate
 databricks bundle deploy -t dev
 ```
+
+### Verify in your workspace (high confidence before a full update)
+
+After deploy, ask Databricks to **validate the pipeline graph** (planning / analysis) without requiring a belief that everything will succeed at runtime—it catches missing tables, bad references, and many Python analysis errors:
+
+```bash
+databricks bundle run va_claims_medallion -t dev --validate-only
+```
+
+Wait until it finishes successfully, then start a normal update from the UI or:
+
+```bash
+databricks bundle run va_claims_medallion -t dev
+```
+
+Together: **local script + `bundle validate` + `bundle run … --validate-only`** is the strongest check you can automate without hand-waving; the last few percent is workspace-specific (UC grants, quotas, runtime).
 
 This syncs bundle files and creates/updates **SDP** `va_claims_medallion_dev` (name may include target).
 
@@ -89,6 +115,10 @@ Replace `HOST` with your app URL.
 ### “You must use serverless compute in this workspace”
 
 Some workspaces **do not allow** classic (cluster-backed) SDP pipelines. The bundle sets **`serverless: true`** on `va_claims_medallion` in [`dab/resources/pipelines.yml`](../dab/resources/pipelines.yml). If you still see this error, upgrade the Databricks CLI (`databricks --version`; use **0.265+**), pull the latest repo, and run `databricks bundle deploy -t dev` again. Do not add a `clusters:` block unless your admin allows provisioned compute for pipelines.
+
+### `NO_TABLES_IN_PIPELINE` (no tables found)
+
+On **Lakeflow / serverless SDP**, Python must use **`from pyspark import pipelines as dp`** with **`@dp.materialized_view`** (batch) or **`@dp.table`** (streaming), and reference other pipeline datasets with **`spark.table("dataset_name")`**. The legacy **`import dlt` / `@dlt.table` / `dlt.read`** module often does **not** register datasets in that runtime, which triggers this error. The demo notebook [`dab/notebooks/dlt_va_claims.py`](../dab/notebooks/dlt_va_claims.py) uses the `dp` API. See [Lakeflow SDP Python reference](https://docs.databricks.com/en/delta-live-tables/python-ref.html) and [What happened to `@dlt`?](https://docs.databricks.com/en/delta-live-tables/python-ref.html#what-happened-to-dlt).
 
 ## Optional job wrapper
 

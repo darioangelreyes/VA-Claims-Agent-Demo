@@ -15,8 +15,10 @@ This folder holds **bundle includes** referenced from the root [databricks.yml](
 
 ```bash
 cd ..   # repo root
+uv run python scripts/validate_va_claims_sdp_notebook.py   # optional: static SDP checks
 databricks bundle validate
 databricks bundle deploy -t dev
+databricks bundle run va_claims_medallion -t dev --validate-only   # optional: graph check in workspace
 ```
 
 Variables (`catalog`, `schema`) are defined in the root `databricks.yml`.
