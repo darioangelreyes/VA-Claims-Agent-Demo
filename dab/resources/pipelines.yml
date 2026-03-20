@@ -1,4 +1,5 @@
 # SDP (Spark Declarative Pipeline) — medallion (bronze → silver → gold)
+# serverless: true — required on workspaces that only allow serverless SDP (e.g. many fedhealth / demo tenants).
 resources:
   pipelines:
     va_claims_medallion:
@@ -6,6 +7,7 @@ resources:
       catalog: ${var.catalog}
       target: ${var.schema}
       development: true
+      serverless: true
       libraries:
         - notebook:
             path: ../notebooks/dlt_va_claims.py

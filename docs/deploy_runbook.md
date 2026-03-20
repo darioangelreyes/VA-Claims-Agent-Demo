@@ -84,6 +84,12 @@ Replace `HOST` with your app URL.
 3. Configure Genie + `VITE_GENIE_SPACE_URL` rebuild if needed
 4. `./deploy.sh`
 
+## Troubleshooting
+
+### “You must use serverless compute in this workspace”
+
+Some workspaces **do not allow** classic (cluster-backed) SDP pipelines. The bundle sets **`serverless: true`** on `va_claims_medallion` in [`dab/resources/pipelines.yml`](../dab/resources/pipelines.yml). If you still see this error, upgrade the Databricks CLI (`databricks --version`; use **0.265+**), pull the latest repo, and run `databricks bundle deploy -t dev` again. Do not add a `clusters:` block unless your admin allows provisioned compute for pipelines.
+
 ## Optional job wrapper
 
 You can add a **job** that runs the pipeline using `pipeline_task` referencing `${resources.pipelines.va_claims_medallion.id}` after the bundle defines stable IDs — template was omitted from the repo to avoid first-deploy circular references; add under `dab/resources/` if your CLI version supports it.
