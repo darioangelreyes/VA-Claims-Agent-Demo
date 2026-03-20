@@ -1,0 +1,14 @@
+# SDP (Spark Declarative Pipeline) — medallion (bronze → silver → gold)
+resources:
+  pipelines:
+    va_claims_medallion:
+      name: va_claims_medallion_${bundle.target}
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      development: true
+      libraries:
+        - notebook:
+            path: ../notebooks/dlt_va_claims.py
+      configuration:
+        bundle.catalog: ${var.catalog}
+        bundle.schema: ${var.schema}

@@ -666,7 +666,169 @@ class ClaimsService:
             print(f"Error fetching history: {e}")
         
         return []
-    
+
+    async def get_claims_timeseries(self) -> List[Dict[str, Any]]:
+        """
+        Weekly aggregates from gold_claims_timeseries (SDP) for dashboard trends.
+        """
+        try:
+            sql = f"""
+            SELECT
+                CAST(week_start AS STRING) AS week_start,
+                current_status,
+                claim_count,
+                pact_eligible_count
+            FROM {self.schema}.gold_claims_timeseries
+            ORDER BY week_start, current_status
+            LIMIT 500
+            """
+            results = await self._execute_query(sql)
+            if results:
+                return [
+                    {
+                        "weekStart": row[0],
+                        "currentStatus": row[1],
+                        "claimCount": int(row[2]) if row[2] is not None else 0,
+                        "pactEligibleCount": int(row[3]) if row[3] is not None else 0,
+                    }
+                    for row in results
+                ]
+        except Exception as e:
+            print(f"Error fetching claims timeseries: {e}")
+        return []
+
+    async def suggest_adjudication_decision(self, claim_id: str) -> Dict[str, Any]:
+        """
+        Decision support: approve / deny / request_clarification with reasons and doc citations.
+        Retrieves VA policy chunks via SQL (no Vector Search). Optionally calls Model Serving URL.
+        """
+        safe_id = (claim_id or "").replace("'", "")
+        citations: List[Dict[str, str]] = []
+        context_chunks: List[str] = []
+        try:
+            sql_chunks = f"""
+            SELECT chunk_id, title, section, source_url, body
+            FROM {self.schema}.silver_va_doc_chunk
+            LIMIT 10
+            """
+            chunk_rows = await self._execute_query(sql_chunks)
+            if chunk_rows:
+                for row in chunk_rows:
+                    citations.append(
+                        {
+                            "chunkId": str(row[0]),
+                            "title": str(row[1]) if row[1] else "",
+                            "section": str(row[2]) if row[2] else "",
+                            "sourceUrl": str(row[3]) if row[3] else "",
+                        }
+                    )
+                    if row[4]:
+                        context_chunks.append(str(row[4]))
+        except Exception as e:
+            print(f"Error loading doc chunks for suggestion: {e}")
+
+        fraud_score = 0.0
+        compliance_score = 100.0
+        condition = ""
+        status = ""
+        try:
+            sql_c = f"""
+            SELECT fraud_score, compliance_score, claimed_condition, current_status
+            FROM {self.schema}.claims
+            WHERE claim_id = '{safe_id}'
+            LIMIT 1
+            """
+            cr = await self._execute_query(sql_c)
+            if cr and len(cr[0]) >= 4:
+                fraud_score = float(cr[0][0] or 0)
+                compliance_score = float(cr[0][1] or 0)
+                condition = str(cr[0][2] or "")
+                status = str(cr[0][3] or "")
+        except Exception as e:
+            print(f"Error loading claim for suggestion: {e}")
+
+        serving_url = os.getenv("DATABRICKS_ADJUDICATION_SUGGEST_URL") or os.getenv(
+            "DATABRICKS_SERVING_ENDPOINT_URL"
+        )
+        if serving_url and context_chunks:
+            try:
+                import httpx
+
+                payload = {
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": (
+                                "You are a VA claims decision-support assistant. Respond with JSON only: "
+                                '{"decision":"APPROVE|DENY|REQUEST_CLARIFICATION","confidence":0.0-1.0,'
+                                '"reasons":["..."],"citedChunkIds":["..."]}. '
+                                f"Claim: id={safe_id}, condition={condition}, status={status}, "
+                                f"fraud_score={fraud_score}, compliance_score={compliance_score}. "
+                                "Context:\n" + "\n---\n".join(context_chunks[:5])
+                            ),
+                        }
+                    ],
+                    "max_tokens": 800,
+                }
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    token = os.getenv("DATABRICKS_TOKEN", "")
+                    r = await client.post(
+                        serving_url,
+                        json=payload,
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "Content-Type": "application/json",
+                        },
+                    )
+                    if r.status_code == 200:
+                        # Many endpoints wrap text in choices[0].message.content
+                        data = r.json()
+                        text = ""
+                        if isinstance(data, dict):
+                            if "choices" in data:
+                                text = data["choices"][0].get("message", {}).get("content", "")
+                            elif "output" in data:
+                                text = str(data["output"])
+                            else:
+                                text = str(data)
+                        return {
+                            "decision": "REQUEST_CLARIFICATION",
+                            "confidence": 0.5,
+                            "reasons": [text[:2000]] if text else ["Model returned empty output."],
+                            "citations": citations,
+                            "disclaimer": "Decision support only; not a legal determination.",
+                            "source": "model_serving",
+                        }
+            except Exception as e:
+                print(f"Model serving suggestion failed: {e}")
+
+        # Heuristic fallback (no Inference Tables; no Vector Search)
+        reasons: List[str] = []
+        if fraud_score >= 60:
+            decision = "REQUEST_CLARIFICATION"
+            reasons.append("Elevated fraud risk score; verify service records and consistency.")
+        elif compliance_score < 55:
+            decision = "REQUEST_CLARIFICATION"
+            reasons.append("Compliance / evidence score is low; request additional documentation.")
+        elif status in ("DECISION_READY",) and fraud_score < 35:
+            decision = "APPROVE"
+            reasons.append("Claim appears decision-ready with acceptable risk scores (synthetic rules).")
+        else:
+            decision = "REQUEST_CLARIFICATION"
+            reasons.append("Default to clarification pending full manual review.")
+
+        if context_chunks:
+            reasons.append("See cited VA public documentation excerpts in citations.")
+
+        return {
+            "decision": decision,
+            "confidence": 0.65 if decision == "REQUEST_CLARIFICATION" else 0.55,
+            "reasons": reasons,
+            "citations": citations,
+            "disclaimer": "Decision support only; not a legal determination.",
+            "source": "heuristic_with_doc_chunks",
+        }
+
     async def update_claim_status(
         self, 
         claim_id: str, 

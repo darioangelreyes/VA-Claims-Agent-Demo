@@ -1,0 +1,41 @@
+# Databricks Asset Bundle — VA Claims Agent Demo
+# Deploy from repo root: databricks bundle deploy -t dev
+# See docs/deploy_runbook.md
+
+bundle:
+  name: va_claims_agent_demo
+
+include:
+  - dab/resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog for VA Claims AI demo
+    default: va_claims_ai
+  schema:
+    description: Schema for medallion tables and app-facing gold
+    default: vba_claims_agent
+  warehouse_id:
+    description: Optional SQL warehouse ID for jobs (set per workspace)
+    default: ""
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog: va_claims_ai
+      schema: vba_claims_agent
+  prod:
+    mode: production
+    variables:
+      catalog: va_claims_ai
+      schema: vba_claims_agent
+
+sync:
+  exclude:
+    - .git
+    - client/node_modules
+    - "**/__pycache__"
+    - .venv
+    - "*.pyc"

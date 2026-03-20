@@ -187,6 +187,56 @@ class ClaimActionResponse(BaseModel):
     timestamp: Optional[str] = None
 
 
+class TimeseriesRow(BaseModel):
+    weekStart: str
+    currentStatus: str
+    claimCount: int
+    pactEligibleCount: int
+
+
+class AdjudicationSuggestionRequest(BaseModel):
+    claimId: str
+
+
+class AdjudicationSuggestionResponse(BaseModel):
+    decision: str
+    confidence: float
+    reasons: List[str]
+    citations: List[Dict[str, Any]]
+    disclaimer: str
+    source: str
+
+
+@router.get("/adjudication/timeseries", response_model=List[TimeseriesRow])
+async def get_adjudication_timeseries() -> List[TimeseriesRow]:
+    """Gold-layer weekly claim counts for dashboard trends (SDP `gold_claims_timeseries`)."""
+    try:
+        service = ClaimsService()
+        rows = await service.get_claims_timeseries()
+        return [TimeseriesRow(**r) for r in rows]
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch adjudication timeseries: {str(e)}"
+        )
+
+
+@router.post("/adjudication/suggest", response_model=AdjudicationSuggestionResponse)
+async def post_adjudication_suggest(
+    body: AdjudicationSuggestionRequest,
+) -> AdjudicationSuggestionResponse:
+    """
+    Near-real-time adjudication suggestion (approve / deny / request clarification).
+    Uses SQL-selected policy chunks; optional Model Serving via DATABRICKS_ADJUDICATION_SUGGEST_URL
+    or DATABRICKS_SERVING_ENDPOINT_URL. No Vector Search or Inference Tables.
+    """
+    try:
+        service = ClaimsService()
+        data = await service.suggest_adjudication_decision(body.claimId)
+        return AdjudicationSuggestionResponse(**data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Adjudication suggest failed: {str(e)}")
+
+
 @router.get("/adjudication/dashboard", response_model=AdjudicationDashboardData)
 async def get_adjudication_dashboard() -> AdjudicationDashboardData:
     """

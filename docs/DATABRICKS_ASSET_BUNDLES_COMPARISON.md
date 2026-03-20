@@ -17,7 +17,7 @@ my-bundle/
 ├── databricks.yml          # Main bundle configuration
 ├── resources/
 │   ├── jobs.yml           # Job definitions
-│   ├── pipelines.yml      # Delta Live Tables pipelines
+│   ├── pipelines.yml      # SDP (bundle resources)
 │   └── notebooks/         # Notebooks as code
 ├── src/                   # Python libraries
 └── tests/                 # Unit tests
@@ -146,7 +146,7 @@ When you run `databricks apps deploy`, it:
 #### DABs Deploy:
 - ✅ Job definitions
 - ✅ Notebook files
-- ✅ DLT pipelines
+- ✅ SDP
 - ✅ Cluster configurations
 - ✅ Permissions & access control
 - ✅ Model endpoints (MLflow)
@@ -207,7 +207,7 @@ Resources are created **on-demand** via SDK calls while app is running.
 ✅ **ETL Pipelines**: Daily data ingestion jobs  
 ✅ **ML Training Jobs**: Scheduled model training  
 ✅ **Data Quality Checks**: Automated validation  
-✅ **Delta Live Tables**: Streaming data pipelines  
+✅ **SDP** (Spark Declarative Pipeline): declarative streaming tables on Spark  
 ✅ **CI/CD Automation**: Deploy infrastructure with code  
 ✅ **Multi-environment**: Promote dev → staging → prod  
 
@@ -364,7 +364,7 @@ databricks apps deploy
 |----------|---------|-------------------|---------|
 | Need scheduled ETL jobs? | ✅ | ❌ | ❌ |
 | Need web UI for users? | ❌ | ✅ | ❌ |
-| Need Delta Live Tables? | ✅ | ❌ | ❌ |
+| Need SDP? | ✅ | ❌ | ❌ |
 | Need interactive dashboard? | ❌ | ✅ | ❌ |
 | Need multi-env infrastructure? | ✅ | ⚠️ Manual | ⚠️ Manual |
 | Need programmatic automation? | ❌ | ⚠️ Limited | ✅ |

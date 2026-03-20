@@ -199,10 +199,20 @@ CREATE TABLE va_claims_ai.vba_claims_agent.gold_adjudication_reports (
 
 ---
 
+## DAB-related APIs
+
+After deploying the [Databricks Asset Bundle](docs/deploy_runbook.md) and running SDP:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/claims/adjudication/timeseries` | Rows from `gold_claims_timeseries` for dashboard charts |
+| `POST /api/claims/adjudication/suggest` | Body `{"claimId":"..."}` — decision support using `silver_va_doc_chunk` (+ optional Model Serving) |
+
 ## Test URLs
 
 - Frontend: http://localhost:5174
 - Backend Health: http://localhost:8001/health
 - API Docs: http://localhost:8001/docs
 - Dashboard API: http://localhost:8001/api/claims/adjudication/dashboard
+- Timeseries: http://localhost:8001/api/claims/adjudication/timeseries
 

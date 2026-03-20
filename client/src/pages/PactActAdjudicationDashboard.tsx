@@ -4,6 +4,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+
+const GENIE_SPACE_URL = import.meta.env.VITE_GENIE_SPACE_URL as string | undefined;
 
 interface PriorityClaim {
   claimId: string;
@@ -85,6 +96,24 @@ const PactActAdjudicationDashboard = () => {
     timestamp: string;
   }>>([]);
   const [showRawLogs, setShowRawLogs] = useState(true);
+
+  const [timeseriesRows, setTimeseriesRows] = useState<
+    Array<{
+      weekStart: string;
+      currentStatus: string;
+      claimCount: number;
+      pactEligibleCount: number;
+    }>
+  >([]);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestResult, setSuggestResult] = useState<{
+    decision: string;
+    confidence: number;
+    reasons: string[];
+    citations: Array<{ chunkId?: string; title?: string; sourceUrl?: string }>;
+    disclaimer: string;
+    source: string;
+  } | null>(null);
   
   const [data, setData] = useState<DashboardData>({
     myAssignedClaims: 45, // Total assigned claims (17 priority + 28 non-priority)
@@ -744,9 +773,11 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     const loadData = async () => {
       setLoading(true);
       try {
-        // const response = await fetch('/api/claims/adjudication/dashboard');
-        // const apiData = await response.json();
-        // setData(apiData);
+        const tsRes = await fetch('/api/claims/adjudication/timeseries');
+        if (tsRes.ok) {
+          const ts = await tsRes.json();
+          setTimeseriesRows(Array.isArray(ts) ? ts : []);
+        }
       } catch (error) {
         console.error('Error loading dashboard:', error);
       } finally {
@@ -755,6 +786,53 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     };
     loadData();
   }, []);
+
+  const chartData = (() => {
+    const byWeek: Record<string, { weekStart: string; total: number; pact: number }> = {};
+    for (const r of timeseriesRows) {
+      const k = r.weekStart || 'unknown';
+      if (!byWeek[k]) byWeek[k] = { weekStart: k, total: 0, pact: 0 };
+      byWeek[k].total += r.claimCount;
+      byWeek[k].pact += r.pactEligibleCount;
+    }
+    return Object.values(byWeek).sort((a, b) => a.weekStart.localeCompare(b.weekStart));
+  })();
+
+  const runAdjudicationSuggest = async () => {
+    if (!selectedClaim?.claimId) return;
+    setSuggestLoading(true);
+    setSuggestResult(null);
+    try {
+      const res = await fetch('/api/claims/adjudication/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claimId: selectedClaim.claimId }),
+      });
+      if (res.ok) {
+        setSuggestResult(await res.json());
+      } else {
+        setSuggestResult({
+          decision: 'ERROR',
+          confidence: 0,
+          reasons: [`HTTP ${res.status}`],
+          citations: [],
+          disclaimer: '',
+          source: 'error',
+        });
+      }
+    } catch (e) {
+      setSuggestResult({
+        decision: 'ERROR',
+        confidence: 0,
+        reasons: [e instanceof Error ? e.message : 'Request failed'],
+        citations: [],
+        disclaimer: '',
+        source: 'error',
+      });
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
 
   // Auto-load first claim when filter changes or claims are processed
   useEffect(() => {
@@ -916,6 +994,112 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
       </div>
 
       <div className="max-w-[1600px] mx-auto px-8 py-6">
+        {/* Trends + Genie + AI suggest (DAB gold_claims_timeseries / silver_va_doc_chunk) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <Card className="bg-white border-2 border-gray-300 shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">CLAIMS TRENDS (weekly)</CardTitle>
+              <p className="text-sm text-gray-600">
+                From Unity Catalog gold_claims_timeseries after SDP run
+              </p>
+            </CardHeader>
+            <CardContent className="h-72">
+              {chartData.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No timeseries data yet — deploy the DAB pipeline and refresh, or API unreachable.
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <XAxis dataKey="weekStart" tick={{ fontSize: 10 }} />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="total" name="Claims" fill="#1e40af" />
+                    <Bar dataKey="pact" name="PACT-eligible" fill="#059669" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-2 border-gray-300 shadow-md">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold">GENIE &amp; AI DECISION SUPPORT</CardTitle>
+              <p className="text-sm text-gray-600">
+                Open your Genie space (configure in workspace). Suggestions use SQL-selected doc chunks
+                (no Vector Search).
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {GENIE_SPACE_URL ? (
+                <a
+                  href={GENIE_SPACE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-blue-800 font-semibold underline"
+                >
+                  Open Genie space (new tab)
+                </a>
+              ) : (
+                <p className="text-sm text-amber-800">
+                  Set <code className="bg-gray-100 px-1">VITE_GENIE_SPACE_URL</code> at build time to
+                  link your Genie space.
+                </p>
+              )}
+              <div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={!selectedClaim || suggestLoading}
+                  onClick={() => void runAdjudicationSuggest()}
+                >
+                  {suggestLoading ? 'Suggesting…' : 'Suggest decision for selected claim'}
+                </Button>
+              </div>
+              {suggestResult && (
+                <div className="text-sm border rounded p-3 bg-gray-50 space-y-2">
+                  <div>
+                    <strong>Decision:</strong> {suggestResult.decision}{' '}
+                    <span className="text-gray-600">
+                      (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Reasons:</strong>
+                    <ul className="list-disc pl-5">
+                      {suggestResult.reasons.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {suggestResult.citations?.length > 0 && (
+                    <div>
+                      <strong>Citations:</strong>
+                      <ul className="list-disc pl-5">
+                        {suggestResult.citations.map((c, i) => (
+                          <li key={i}>
+                            {c.title || c.chunkId}
+                            {c.sourceUrl ? (
+                              <>
+                                {' '}
+                                <a href={c.sourceUrl} className="text-blue-700 underline" target="_blank" rel="noreferrer">
+                                  source
+                                </a>
+                              </>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
+                  <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* TWO COLUMN LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* LEFT COLUMN */}
