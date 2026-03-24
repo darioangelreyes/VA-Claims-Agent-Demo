@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse
 from pydantic import BaseModel
 from server.services.claims_service import ClaimsService
+from server.services import genie_conversation_client as genie_conv
 import httpx
 import os
 import json
@@ -201,6 +202,20 @@ class GenieVerifyResponse(BaseModel):
     detail: Optional[str] = None
 
 
+class GenieConversationStatusResponse(BaseModel):
+    configured: bool
+
+
+class GenieAskRequest(BaseModel):
+    content: str
+    conversation_id: Optional[str] = None
+
+
+class GenieAskResponse(BaseModel):
+    conversation_id: str
+    message_id: str
+
+
 class AdjudicationSuggestionRequest(BaseModel):
     claimId: str
 
@@ -272,6 +287,95 @@ async def verify_genie_space(url: str = Query(..., min_length=16, max_length=204
         return GenieVerifyResponse(ok=True, statusCode=code)
     except httpx.HTTPError as e:
         return GenieVerifyResponse(ok=False, detail=str(e))
+
+
+def _genie_ask_impl(body: GenieAskRequest) -> GenieAskResponse:
+    if not genie_conv.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Genie conversation API not configured. Set DATABRICKS_HOST, DATABRICKS_TOKEN, "
+                "and DATABRICKS_GENIE_SPACE_ID (or DATABRICKS_GENIE_SPACE_URL with /genie/spaces/{id})."
+            ),
+        )
+    content = (body.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="content is required")
+    space_id = genie_conv.get_genie_space_id()
+    try:
+        raw = (
+            genie_conv.create_message(space_id, body.conversation_id, content)
+            if body.conversation_id
+            else genie_conv.start_conversation(space_id, content)
+        )
+        if isinstance(raw.get("result"), dict):
+            raw = raw["result"]
+        conv = raw.get("conversation") or {}
+        msg = raw.get("message") or {}
+        conversation_id = (
+            (conv.get("id") or conv.get("conversation_id"))
+            or raw.get("conversation_id")
+            or (body.conversation_id if body.conversation_id else None)
+        )
+        message_id = msg.get("message_id") or msg.get("id") or raw.get("message_id") or raw.get("id")
+        if not conversation_id or not message_id:
+            keys = list(raw.keys()) if isinstance(raw, dict) else []
+            raise HTTPException(
+                status_code=502,
+                detail=f"Unexpected Genie API response shape (top-level keys: {keys})",
+            )
+        return GenieAskResponse(conversation_id=str(conversation_id), message_id=str(message_id))
+    except HTTPException:
+        raise
+    except httpx.HTTPStatusError as e:
+        snippet = (e.response.text or "")[:500] if e.response is not None else ""
+        raise HTTPException(
+            status_code=502,
+            detail=f"Genie API HTTP {e.response.status_code if e.response else '?'}: {snippet or str(e)}",
+        ) from e
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+
+@router.get("/genie/conversation/status", response_model=GenieConversationStatusResponse)
+async def genie_conversation_status() -> GenieConversationStatusResponse:
+    """Whether server can proxy Genie Conversation API (token + host + space id)."""
+    return GenieConversationStatusResponse(configured=genie_conv.is_configured())
+
+
+@router.post("/genie/conversation/ask", response_model=GenieAskResponse)
+async def genie_conversation_ask(body: GenieAskRequest) -> GenieAskResponse:
+    """Start or continue a Genie conversation; poll with GET /genie/conversation/message."""
+    return _genie_ask_impl(body)
+
+
+@router.get("/genie/conversation/message")
+async def genie_conversation_get_message(
+    conversation_id: str = Query(..., min_length=1),
+    message_id: str = Query(..., min_length=1),
+) -> Dict[str, Any]:
+    if not genie_conv.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Genie conversation API not configured.",
+        )
+    space_id = genie_conv.get_genie_space_id()
+    try:
+        raw = genie_conv.get_message(space_id, conversation_id, message_id)
+    except httpx.HTTPStatusError as e:
+        snippet = (e.response.text or "")[:500] if e.response is not None else ""
+        raise HTTPException(
+            status_code=502,
+            detail=f"Genie API HTTP {e.response.status_code if e.response else '?'}: {snippet or str(e)}",
+        ) from e
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+    return {
+        "status": raw.get("status") or "UNKNOWN",
+        "content": raw.get("content"),
+        "attachments": raw.get("attachments"),
+        "error": raw.get("error"),
+    }
 
 
 @router.post("/adjudication/suggest", response_model=AdjudicationSuggestionResponse)

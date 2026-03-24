@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { fetchClaimsApi } from '@/lib/claimsApi';
+import { GenieClaimsChat } from '@/components/GenieClaimsChat';
 
 const GENIE_SPACE_URL = import.meta.env.VITE_GENIE_SPACE_URL as string | undefined;
 
@@ -107,8 +108,6 @@ const PactActAdjudicationDashboard = () => {
   >([]);
   const [timeseriesLoading, setTimeseriesLoading] = useState(true);
   const [timeseriesError, setTimeseriesError] = useState<string | null>(null);
-  const [genieEmbedOk, setGenieEmbedOk] = useState<boolean | null>(null);
-  const [genieVerifyDetail, setGenieVerifyDetail] = useState<string | null>(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestResult, setSuggestResult] = useState<{
     decision: string;
@@ -806,41 +805,6 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     void loadData();
   }, []);
 
-  useEffect(() => {
-    const url = GENIE_SPACE_URL?.trim();
-    if (!url) {
-      setGenieEmbedOk(null);
-      setGenieVerifyDetail(null);
-      return;
-    }
-    let cancelled = false;
-    setGenieEmbedOk(null);
-    setGenieVerifyDetail(null);
-    void (async () => {
-      try {
-        const r = await fetchClaimsApi(`/genie/verify?url=${encodeURIComponent(url)}`);
-        const data = (await r.json()) as { ok?: boolean; detail?: string };
-        if (cancelled) return;
-        if (r.ok && data?.ok === true) {
-          setGenieEmbedOk(true);
-        } else {
-          setGenieEmbedOk(false);
-          setGenieVerifyDetail(
-            typeof data?.detail === 'string' ? data.detail : 'Genie URL could not be verified',
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setGenieEmbedOk(false);
-          setGenieVerifyDetail('Verification request failed');
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [GENIE_SPACE_URL]);
-
   const chartData = (() => {
     const byWeek: Record<string, { weekStart: string; total: number; pact: number }> = {};
     for (const r of timeseriesRows) {
@@ -1083,34 +1047,24 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
           </Card>
           <Card className="bg-white border-2 border-gray-300 shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-bold">
-                {genieEmbedOk ? 'GENIE CHAT' : 'GENIE & AI DECISION SUPPORT'}
-              </CardTitle>
+              <CardTitle className="text-lg font-bold">GENIE &amp; AI DECISION SUPPORT</CardTitle>
               <p className="text-sm text-gray-600">
-                {genieEmbedOk
-                  ? 'Embedded Genie (verified with workspace PAT). Some browsers block iframes — use Open in new tab if the chat is blank.'
-                  : 'Genie space link from build (VITE_GENIE_SPACE_URL). Suggestions below use SQL-selected doc chunks (no Vector Search).'}
+                Use <strong className="font-semibold">Ask Genie</strong> (bottom-right) for natural-language Q&amp;A
+                over your Claims Genie space via the Conversation API (same space as{' '}
+                <code className="rounded bg-gray-100 px-1 text-xs">VITE_GENIE_SPACE_URL</code> when set). Suggestions
+                below use SQL-selected doc chunks (no Vector Search).
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {!GENIE_SPACE_URL?.trim() ? (
                 <p className="text-sm text-amber-800">
-                  Set <code className="bg-gray-100 px-1">VITE_GENIE_SPACE_URL</code> at build time to the Genie
-                  space URL (same host as <code className="bg-gray-100 px-1">DATABRICKS_HOST</code>), rebuild, and
-                  redeploy the app.
+                  Set <code className="bg-gray-100 px-1">VITE_GENIE_SPACE_URL</code> at build time for the &quot;open
+                  in new tab&quot; link. On the app, set{' '}
+                  <code className="bg-gray-100 px-1">DATABRICKS_GENIE_SPACE_ID</code> or{' '}
+                  <code className="bg-gray-100 px-1">DATABRICKS_GENIE_SPACE_URL</code> so the floating chat can call
+                  Genie.
                 </p>
-              ) : genieEmbedOk ? (
-                <iframe
-                  title="Databricks Genie"
-                  src={GENIE_SPACE_URL.trim()}
-                  className="w-full h-[min(28rem,55vh)] min-h-[240px] rounded border border-gray-200 bg-white"
-                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-                />
-              ) : (
-                <p className="text-sm text-amber-900">
-                  {genieVerifyDetail ?? 'Checking Genie URL…'}
-                </p>
-              )}
+              ) : null}
               {GENIE_SPACE_URL?.trim() ? (
                 <a
                   href={GENIE_SPACE_URL.trim()}
@@ -2087,6 +2041,7 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
           </div>
         )}
       </div>
+      <GenieClaimsChat genieSpaceUrl={GENIE_SPACE_URL} />
     </div>
   );
 };
