@@ -1556,7 +1556,7 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                   </Button>
                 </div>
 
-                <div className="flex justify-center gap-3 mb-3">
+                <div className="mb-3 flex flex-wrap justify-center gap-3">
                   <Button 
                     onClick={handleApproveClaim}
                     className="bg-green-600 hover:bg-green-700 text-white font-bold px-8"
@@ -1579,7 +1579,21 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                     <FileText className="w-4 h-4 mr-2" />
                     REQUEST MORE EVIDENCE
                   </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="border-2 border-indigo-700 bg-indigo-50 font-bold text-indigo-900 hover:bg-indigo-100 px-8"
+                    disabled={!selectedClaim || suggestLoading}
+                    onClick={() => void runAdjudicationSuggest()}
+                    title="Same as &quot;Suggest decision for selected claim&quot; in AI Decision Support — policy-grounded suggestion"
+                  >
+                    {suggestLoading ? 'Working…' : 'AI DECISION'}
+                  </Button>
                 </div>
+                <p className="mb-3 text-center text-xs text-gray-500">
+                  AI DECISION runs the same suggest API as the button in AI Decision Support; results appear in the
+                  panel on the right.
+                </p>
 
                 {/* DENY FORM */}
                 {showDenyForm && (

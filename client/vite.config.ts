@@ -7,6 +7,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Relative asset URLs so CSS/JS load when the app is served under a subpath (e.g. Databricks Apps).
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {
