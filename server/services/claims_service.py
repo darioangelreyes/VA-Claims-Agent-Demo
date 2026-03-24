@@ -23,10 +23,15 @@ class ClaimsService:
         self.schema = f"{catalog}.{schema_name}"
     
     async def _get_warehouse_id(self) -> str:
-        """Get the first available SQL warehouse ID"""
+        """Get SQL warehouse ID (env override or first available)."""
         if self._warehouse_id:
             return self._warehouse_id
-        
+
+        env_id = (os.getenv("DATABRICKS_SQL_WAREHOUSE_ID") or os.getenv("DATABRICKS_WAREHOUSE_ID") or "").strip()
+        if env_id:
+            self._warehouse_id = env_id
+            return self._warehouse_id
+
         warehouses = list(self.workspace_client.warehouses.list())
         if not warehouses:
             raise Exception("No SQL warehouses available")
@@ -670,32 +675,30 @@ class ClaimsService:
     async def get_claims_timeseries(self) -> List[Dict[str, Any]]:
         """
         Weekly aggregates from gold_claims_timeseries (SDP) for dashboard trends.
+        Raises on SQL/warehouse errors so the API can return 5xx instead of an empty chart.
         """
-        try:
-            sql = f"""
-            SELECT
-                CAST(week_start AS STRING) AS week_start,
-                current_status,
-                claim_count,
-                pact_eligible_count
-            FROM {self.schema}.gold_claims_timeseries
-            ORDER BY week_start, current_status
-            LIMIT 500
-            """
-            results = await self._execute_query(sql)
-            if results:
-                return [
-                    {
-                        "weekStart": row[0],
-                        "currentStatus": row[1],
-                        "claimCount": int(row[2]) if row[2] is not None else 0,
-                        "pactEligibleCount": int(row[3]) if row[3] is not None else 0,
-                    }
-                    for row in results
-                ]
-        except Exception as e:
-            print(f"Error fetching claims timeseries: {e}")
-        return []
+        sql = f"""
+        SELECT
+            CAST(week_start AS STRING) AS week_start,
+            current_status,
+            claim_count,
+            pact_eligible_count
+        FROM {self.schema}.gold_claims_timeseries
+        ORDER BY week_start, current_status
+        LIMIT 500
+        """
+        results = await self._execute_query(sql)
+        if not results:
+            return []
+        return [
+            {
+                "weekStart": row[0],
+                "currentStatus": row[1],
+                "claimCount": int(row[2]) if row[2] is not None else 0,
+                "pactEligibleCount": int(row[3]) if row[3] is not None else 0,
+            }
+            for row in results
+        ]
 
     async def suggest_adjudication_decision(self, claim_id: str) -> Dict[str, Any]:
         """

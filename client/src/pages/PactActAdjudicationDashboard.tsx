@@ -64,7 +64,6 @@ interface DashboardData {
 }
 
 const PactActAdjudicationDashboard = () => {
-  const [loading, setLoading] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState<PriorityClaim | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('priority'); // 'priority', 'pendingReview', 'awaitingEvidence', 'decisionReady', 'needsEvidence', 'over100days', 'approaching60days', 'specificClaim'
   const [specificClaimIds, setSpecificClaimIds] = useState<string[]>([]); // For alert-based filtering
@@ -105,6 +104,10 @@ const PactActAdjudicationDashboard = () => {
       pactEligibleCount: number;
     }>
   >([]);
+  const [timeseriesLoading, setTimeseriesLoading] = useState(true);
+  const [timeseriesError, setTimeseriesError] = useState<string | null>(null);
+  const [genieEmbedOk, setGenieEmbedOk] = useState<boolean | null>(null);
+  const [genieVerifyDetail, setGenieVerifyDetail] = useState<string | null>(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestResult, setSuggestResult] = useState<{
     decision: string;
@@ -771,21 +774,71 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
+      setTimeseriesLoading(true);
+      setTimeseriesError(null);
       try {
         const tsRes = await fetch('/api/claims/adjudication/timeseries');
         if (tsRes.ok) {
           const ts = await tsRes.json();
           setTimeseriesRows(Array.isArray(ts) ? ts : []);
+        } else {
+          let msg = `HTTP ${tsRes.status}`;
+          try {
+            const errBody = (await tsRes.json()) as { detail?: string };
+            if (typeof errBody?.detail === 'string') {
+              msg = errBody.detail;
+            }
+          } catch {
+            /* keep msg */
+          }
+          setTimeseriesError(msg);
+          setTimeseriesRows([]);
         }
       } catch (error) {
-        console.error('Error loading dashboard:', error);
+        console.error('Error loading timeseries:', error);
+        setTimeseriesError(error instanceof Error ? error.message : 'Network error');
+        setTimeseriesRows([]);
       } finally {
-        setLoading(false);
+        setTimeseriesLoading(false);
       }
     };
-    loadData();
+    void loadData();
   }, []);
+
+  useEffect(() => {
+    const url = GENIE_SPACE_URL?.trim();
+    if (!url) {
+      setGenieEmbedOk(null);
+      setGenieVerifyDetail(null);
+      return;
+    }
+    let cancelled = false;
+    setGenieEmbedOk(null);
+    setGenieVerifyDetail(null);
+    void (async () => {
+      try {
+        const r = await fetch(`/api/claims/genie/verify?url=${encodeURIComponent(url)}`);
+        const data = (await r.json()) as { ok?: boolean; detail?: string };
+        if (cancelled) return;
+        if (r.ok && data?.ok === true) {
+          setGenieEmbedOk(true);
+        } else {
+          setGenieEmbedOk(false);
+          setGenieVerifyDetail(
+            typeof data?.detail === 'string' ? data.detail : 'Genie URL could not be verified',
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setGenieEmbedOk(false);
+          setGenieVerifyDetail('Verification request failed');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [GENIE_SPACE_URL]);
 
   const chartData = (() => {
     const byWeek: Record<string, { weekStart: string; total: number; pact: number }> = {};
@@ -858,17 +911,6 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
       setSelectedClaim(null);
     }
   }, [selectedFilter, specificClaimIds, processedClaimIds]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Calculate actual counts from ALL claims (excluding processed ones)
   const actualCounts = {
@@ -1004,9 +1046,25 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
               </p>
             </CardHeader>
             <CardContent className="h-72">
-              {chartData.length === 0 ? (
+              {timeseriesLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                  Loading trends…
+                </div>
+              ) : timeseriesError ? (
+                <div className="text-sm space-y-2 overflow-auto max-h-full pr-1">
+                  <p className="font-semibold text-red-700">Could not load weekly trends</p>
+                  <p className="text-gray-800 break-words">{timeseriesError}</p>
+                  <p className="text-xs text-gray-500">
+                    On the Databricks App, set <code className="bg-gray-100 px-1">DATABRICKS_TOKEN</code>,{' '}
+                    <code className="bg-gray-100 px-1">DATABRICKS_HOST</code>, UC catalog/schema, and optionally{' '}
+                    <code className="bg-gray-100 px-1">DATABRICKS_SQL_WAREHOUSE_ID</code> for SQL execution.
+                    Ensure SDP has materialized <code className="bg-gray-100 px-1">gold_claims_timeseries</code>.
+                  </p>
+                </div>
+              ) : chartData.length === 0 ? (
                 <p className="text-sm text-gray-500">
-                  No timeseries data yet — deploy the DAB pipeline and refresh, or API unreachable.
+                  No rows in gold_claims_timeseries — run the SDP pipeline for this Unity Catalog schema,
+                  then refresh.
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
@@ -1024,28 +1082,44 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
           </Card>
           <Card className="bg-white border-2 border-gray-300 shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg font-bold">GENIE &amp; AI DECISION SUPPORT</CardTitle>
+              <CardTitle className="text-lg font-bold">
+                {genieEmbedOk ? 'GENIE CHAT' : 'GENIE & AI DECISION SUPPORT'}
+              </CardTitle>
               <p className="text-sm text-gray-600">
-                Open your Genie space (configure in workspace). Suggestions use SQL-selected doc chunks
-                (no Vector Search).
+                {genieEmbedOk
+                  ? 'Embedded Genie (verified with workspace PAT). Some browsers block iframes — use Open in new tab if the chat is blank.'
+                  : 'Genie space link from build (VITE_GENIE_SPACE_URL). Suggestions below use SQL-selected doc chunks (no Vector Search).'}
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
-              {GENIE_SPACE_URL ? (
+              {!GENIE_SPACE_URL?.trim() ? (
+                <p className="text-sm text-amber-800">
+                  Set <code className="bg-gray-100 px-1">VITE_GENIE_SPACE_URL</code> at build time to the Genie
+                  space URL (same host as <code className="bg-gray-100 px-1">DATABRICKS_HOST</code>), rebuild, and
+                  redeploy the app.
+                </p>
+              ) : genieEmbedOk ? (
+                <iframe
+                  title="Databricks Genie"
+                  src={GENIE_SPACE_URL.trim()}
+                  className="w-full h-[min(28rem,55vh)] min-h-[240px] rounded border border-gray-200 bg-white"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+                />
+              ) : (
+                <p className="text-sm text-amber-900">
+                  {genieVerifyDetail ?? 'Checking Genie URL…'}
+                </p>
+              )}
+              {GENIE_SPACE_URL?.trim() ? (
                 <a
-                  href={GENIE_SPACE_URL}
+                  href={GENIE_SPACE_URL.trim()}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-blue-800 font-semibold underline"
                 >
                   Open Genie space (new tab)
                 </a>
-              ) : (
-                <p className="text-sm text-amber-800">
-                  Set <code className="bg-gray-100 px-1">VITE_GENIE_SPACE_URL</code> at build time to
-                  link your Genie space.
-                </p>
-              )}
+              ) : null}
               <div>
                 <Button
                   type="button"

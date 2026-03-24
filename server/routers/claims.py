@@ -1,9 +1,10 @@
 """
 Claims Router - Provides endpoints for VA Claims Dashboard
 """
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Query
 from fastapi.responses import StreamingResponse
 from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse
 from pydantic import BaseModel
 from server.services.claims_service import ClaimsService
 import httpx
@@ -194,6 +195,12 @@ class TimeseriesRow(BaseModel):
     pactEligibleCount: int
 
 
+class GenieVerifyResponse(BaseModel):
+    ok: bool
+    statusCode: Optional[int] = None
+    detail: Optional[str] = None
+
+
 class AdjudicationSuggestionRequest(BaseModel):
     claimId: str
 
@@ -218,6 +225,53 @@ async def get_adjudication_timeseries() -> List[TimeseriesRow]:
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch adjudication timeseries: {str(e)}"
         )
+
+
+@router.get("/genie/verify", response_model=GenieVerifyResponse)
+async def verify_genie_space(url: str = Query(..., min_length=16, max_length=2048)) -> GenieVerifyResponse:
+    """
+    Best-effort check that a Genie space URL is reachable on the configured workspace
+    using the app's Databricks PAT (same auth as SQL). Used before embedding Genie in an iframe.
+    """
+    token = os.getenv("DATABRICKS_TOKEN")
+    if not token:
+        return GenieVerifyResponse(ok=False, detail="DATABRICKS_TOKEN not configured on app")
+
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise HTTPException(status_code=400, detail="Genie URL must use https")
+    host = (parsed.hostname or "").lower()
+    if not (host.endswith("databricks.com") or host.endswith("azuredatabricks.net")):
+        raise HTTPException(
+            status_code=400,
+            detail="Genie URL host must be a Databricks cloud domain",
+        )
+
+    cfg_host = urlparse(os.getenv("DATABRICKS_HOST", "")).hostname
+    if cfg_host and host != cfg_host.lower():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Genie URL host must match DATABRICKS_HOST ({cfg_host})",
+        )
+
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient() as client:
+            head = await client.head(url, headers=headers, follow_redirects=True, timeout=25.0)
+            if head.status_code == 405:
+                get = await client.get(
+                    url, headers=headers, follow_redirects=True, timeout=25.0
+                )
+                code = get.status_code
+            else:
+                code = head.status_code
+        if code >= 400:
+            return GenieVerifyResponse(
+                ok=False, statusCode=code, detail=f"Genie URL returned HTTP {code}"
+            )
+        return GenieVerifyResponse(ok=True, statusCode=code)
+    except httpx.HTTPError as e:
+        return GenieVerifyResponse(ok=False, detail=str(e))
 
 
 @router.post("/adjudication/suggest", response_model=AdjudicationSuggestionResponse)

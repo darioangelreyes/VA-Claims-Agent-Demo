@@ -83,6 +83,8 @@ SELECT COUNT(*) FROM fedhealth_demo_ws_catalog.vba_claims_agent.gold_claims_time
 
 Follow [dab/genie/VA_CLAIMS_GENIE_SPACE.md](../dab/genie/VA_CLAIMS_GENIE_SPACE.md).
 
+For **embedded Genie** on the PACT adjudication dashboard, set **`VITE_GENIE_SPACE_URL`** at **build** time to your Genie space URL. Its hostname must match **`DATABRICKS_HOST`**. The UI calls **`GET /api/claims/genie/verify`** (workspace PAT) before showing an iframe; if the iframe stays blank (browser/workspace frame policy), use **Open Genie space (new tab)**.
+
 ## 4. Deploy the Databricks App (UI + API)
 
 ```bash
@@ -90,7 +92,7 @@ Follow [dab/genie/VA_CLAIMS_GENIE_SPACE.md](../dab/genie/VA_CLAIMS_GENIE_SPACE.m
 ./deploy.sh
 ```
 
-Ensure the app’s environment (or `.databricks.env` synced with the app) includes the same `DATABRICKS_*` variables as `.env.local` where applicable.
+Ensure the app’s environment (or `.databricks.env` synced with the app) includes the same `DATABRICKS_*` variables as `.env.local` where applicable. Set **`DATABRICKS_SQL_WAREHOUSE_ID`** if SQL for timeseries/doc chunks does not resolve a warehouse automatically.
 
 ## 5. Smoke tests
 
