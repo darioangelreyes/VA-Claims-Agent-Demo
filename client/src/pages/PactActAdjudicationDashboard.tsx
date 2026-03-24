@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
   BarChart,
@@ -108,6 +108,7 @@ const PactActAdjudicationDashboard = () => {
   >([]);
   const [timeseriesLoading, setTimeseriesLoading] = useState(true);
   const [timeseriesError, setTimeseriesError] = useState<string | null>(null);
+  const [trendsExpanded, setTrendsExpanded] = useState(true);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [suggestResult, setSuggestResult] = useState<{
     decision: string;
@@ -805,6 +806,10 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     void loadData();
   }, []);
 
+  useEffect(() => {
+    setSuggestResult(null);
+  }, [selectedClaim?.claimId]);
+
   const chartData = (() => {
     const byWeek: Record<string, { weekStart: string; total: number; pact: number }> = {};
     for (const r of timeseriesRows) {
@@ -1001,131 +1006,72 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
       </div>
 
       <div className="max-w-[1600px] mx-auto px-8 py-6">
-        {/* Trends + Genie + AI suggest (DAB gold_claims_timeseries / silver_va_doc_chunk) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <Card className="bg-white border-2 border-gray-300 shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">CLAIMS TRENDS (weekly)</CardTitle>
-              <p className="text-sm text-gray-600">
-                From Unity Catalog gold_claims_timeseries after SDP run
-              </p>
-            </CardHeader>
-            <CardContent className="h-72">
-              {timeseriesLoading ? (
-                <div className="flex h-full items-center justify-center text-sm text-gray-500">
-                  Loading trends…
-                </div>
-              ) : timeseriesError ? (
-                <div className="text-sm space-y-2 overflow-auto max-h-full pr-1">
-                  <p className="font-semibold text-red-700">Could not load weekly trends</p>
-                  <p className="text-gray-800 break-words">{timeseriesError}</p>
-                  <p className="text-xs text-gray-500">
-                    On the Databricks App, set <code className="bg-gray-100 px-1">DATABRICKS_TOKEN</code>,{' '}
-                    <code className="bg-gray-100 px-1">DATABRICKS_HOST</code>, UC catalog/schema, and optionally{' '}
-                    <code className="bg-gray-100 px-1">DATABRICKS_SQL_WAREHOUSE_ID</code> for SQL execution.
-                    Ensure SDP has materialized <code className="bg-gray-100 px-1">gold_claims_timeseries</code>.
-                  </p>
-                </div>
-              ) : chartData.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No rows in gold_claims_timeseries — run the SDP pipeline for this Unity Catalog schema,
-                  then refresh.
+        {/* Weekly trends — full width, collapsible (expanded by default) */}
+        <div className="mb-6">
+          <Card className="border-2 border-gray-300 bg-white shadow-md">
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-2">
+              <div className="min-w-0 flex-1">
+                <CardTitle className="text-lg font-bold">CLAIMS TRENDS (weekly)</CardTitle>
+                <p className="text-sm text-gray-600">
+                  From Unity Catalog gold_claims_timeseries after SDP run
                 </p>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="weekStart" tick={{ fontSize: 10 }} />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="total" name="Claims" fill="#1e40af" />
-                    <Bar dataKey="pact" name="PACT-eligible" fill="#059669" />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-2 border-gray-300 shadow-md">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold">GENIE &amp; AI DECISION SUPPORT</CardTitle>
-              <p className="text-sm text-gray-600">
-                Use <strong className="font-semibold">Ask Genie</strong> (bottom-right) for natural-language Q&amp;A
-                over your Claims Genie space via the Conversation API (same space as{' '}
-                <code className="rounded bg-gray-100 px-1 text-xs">VITE_GENIE_SPACE_URL</code> when set). Suggestions
-                below use SQL-selected doc chunks (no Vector Search).
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {!GENIE_SPACE_URL?.trim() ? (
-                <p className="text-sm text-amber-800">
-                  Set <code className="bg-gray-100 px-1">VITE_GENIE_SPACE_URL</code> at build time for the &quot;open
-                  in new tab&quot; link. On the app, set{' '}
-                  <code className="bg-gray-100 px-1">DATABRICKS_GENIE_SPACE_ID</code> or{' '}
-                  <code className="bg-gray-100 px-1">DATABRICKS_GENIE_SPACE_URL</code> so the floating chat can call
-                  Genie.
-                </p>
-              ) : null}
-              {GENIE_SPACE_URL?.trim() ? (
-                <a
-                  href={GENIE_SPACE_URL.trim()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-blue-800 font-semibold underline"
-                >
-                  Open Genie space (new tab)
-                </a>
-              ) : null}
-              <div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!selectedClaim || suggestLoading}
-                  onClick={() => void runAdjudicationSuggest()}
-                >
-                  {suggestLoading ? 'Suggesting…' : 'Suggest decision for selected claim'}
-                </Button>
               </div>
-              {suggestResult && (
-                <div className="text-sm border rounded p-3 bg-gray-50 space-y-2">
-                  <div>
-                    <strong>Decision:</strong> {suggestResult.decision}{' '}
-                    <span className="text-gray-600">
-                      (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
-                    </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1 border-gray-300"
+                onClick={() => setTrendsExpanded((e) => !e)}
+                aria-expanded={trendsExpanded}
+                aria-controls="claims-trends-panel"
+              >
+                {trendsExpanded ? (
+                  <>
+                    Collapse <ChevronUp className="h-4 w-4" aria-hidden />
+                  </>
+                ) : (
+                  <>
+                    Expand <ChevronDown className="h-4 w-4" aria-hidden />
+                  </>
+                )}
+              </Button>
+            </CardHeader>
+            {trendsExpanded ? (
+              <CardContent id="claims-trends-panel" className="h-72 pt-0">
+                {timeseriesLoading ? (
+                  <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                    Loading trends…
                   </div>
-                  <div>
-                    <strong>Reasons:</strong>
-                    <ul className="list-disc pl-5">
-                      {suggestResult.reasons.map((r, i) => (
-                        <li key={i}>{r}</li>
-                      ))}
-                    </ul>
+                ) : timeseriesError ? (
+                  <div className="max-h-full space-y-2 overflow-auto pr-1 text-sm">
+                    <p className="font-semibold text-red-700">Could not load weekly trends</p>
+                    <p className="break-words text-gray-800">{timeseriesError}</p>
+                    <p className="text-xs text-gray-500">
+                      On the Databricks App, set <code className="bg-gray-100 px-1">DATABRICKS_TOKEN</code>,{' '}
+                      <code className="bg-gray-100 px-1">DATABRICKS_HOST</code>, UC catalog/schema, and optionally{' '}
+                      <code className="bg-gray-100 px-1">DATABRICKS_SQL_WAREHOUSE_ID</code> for SQL execution.
+                      Ensure SDP has materialized <code className="bg-gray-100 px-1">gold_claims_timeseries</code>.
+                    </p>
                   </div>
-                  {suggestResult.citations?.length > 0 && (
-                    <div>
-                      <strong>Citations:</strong>
-                      <ul className="list-disc pl-5">
-                        {suggestResult.citations.map((c, i) => (
-                          <li key={i}>
-                            {c.title || c.chunkId}
-                            {c.sourceUrl ? (
-                              <>
-                                {' '}
-                                <a href={c.sourceUrl} className="text-blue-700 underline" target="_blank" rel="noreferrer">
-                                  source
-                                </a>
-                              </>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
-                  <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
-                </div>
-              )}
-            </CardContent>
+                ) : chartData.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No rows in gold_claims_timeseries — run the SDP pipeline for this Unity Catalog schema,
+                    then refresh.
+                  </p>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData}>
+                      <XAxis dataKey="weekStart" tick={{ fontSize: 10 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="total" name="Claims" fill="#1e40af" />
+                      <Bar dataKey="pact" name="PACT-eligible" fill="#059669" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            ) : null}
           </Card>
         </div>
 
@@ -1746,6 +1692,90 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                             </ul>
                           )}
                         </>
+                      )}
+                    </div>
+
+                    {/* AI Decision Support — moved from top Genie card; bottom-right of current claim */}
+                    <div className="space-y-3 rounded-lg border-2 border-blue-200 bg-blue-50/80 p-4">
+                      <h3 className="text-sm font-bold text-blue-900">AI DECISION SUPPORT</h3>
+                      <p className="text-xs leading-relaxed text-blue-800">
+                        Suggestions use SQL-selected policy chunks (no Vector Search). Use{' '}
+                        <strong className="font-semibold">Ask Genie</strong> (screen bottom-right) for natural-language
+                        Q&amp;A over your Claims Genie space.
+                      </p>
+                      {!GENIE_SPACE_URL?.trim() ? (
+                        <p className="text-xs text-amber-900">
+                          Set <code className="rounded bg-white/80 px-1">VITE_GENIE_SPACE_URL</code> for the Genie link;
+                          set <code className="rounded bg-white/80 px-1">DATABRICKS_GENIE_SPACE_ID</code> or{' '}
+                          <code className="rounded bg-white/80 px-1">DATABRICKS_GENIE_SPACE_URL</code> on the app for
+                          the floating chat.
+                        </p>
+                      ) : null}
+                      {GENIE_SPACE_URL?.trim() ? (
+                        <a
+                          href={GENIE_SPACE_URL.trim()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-sm font-semibold text-blue-800 underline"
+                        >
+                          Open Genie space (new tab)
+                        </a>
+                      ) : null}
+                      <div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="w-full sm:w-auto"
+                          disabled={!selectedClaim || suggestLoading}
+                          onClick={() => void runAdjudicationSuggest()}
+                        >
+                          {suggestLoading ? 'Suggesting…' : 'Suggest decision for selected claim'}
+                        </Button>
+                      </div>
+                      {suggestResult && (
+                        <div className="space-y-2 rounded border border-blue-200 bg-white p-3 text-sm shadow-sm">
+                          <div>
+                            <strong>Decision:</strong> {suggestResult.decision}{' '}
+                            <span className="text-gray-600">
+                              (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
+                            </span>
+                          </div>
+                          <div>
+                            <strong>Reasons:</strong>
+                            <ul className="list-disc pl-5">
+                              {suggestResult.reasons.map((r, i) => (
+                                <li key={i}>{r}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          {suggestResult.citations?.length ? (
+                            <div>
+                              <strong>Citations:</strong>
+                              <ul className="list-disc pl-5">
+                                {suggestResult.citations.map((c, i) => (
+                                  <li key={i}>
+                                    {c.title || c.chunkId}
+                                    {c.sourceUrl ? (
+                                      <>
+                                        {' '}
+                                        <a
+                                          href={c.sourceUrl}
+                                          className="text-blue-700 underline"
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          source
+                                        </a>
+                                      </>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                          <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
+                          <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
+                        </div>
                       )}
                     </div>
                   </div>
