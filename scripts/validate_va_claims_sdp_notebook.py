@@ -26,6 +26,23 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = REPO_ROOT / "dab" / "notebooks" / "dlt_va_claims.py"
 
 
+def assert_notebook_cell_split(raw: str) -> None:
+    """Databricks .py notebooks need # COMMAND ---------- between %md and code."""
+    if "# MAGIC %md" not in raw:
+        return
+    idx_py = raw.find("from pyspark import pipelines as dp")
+    if idx_py < 0:
+        return
+    head = raw[:idx_py]
+    if "# COMMAND ----------" not in head:
+        print(
+            "ERROR: after # MAGIC %md, add a line '# COMMAND ----------' before Python code.\n"
+            "Without it, Lakeflow may treat @dp definitions as markdown (NO_TABLES_IN_PIPELINE).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def notebook_to_python_source(raw: str) -> str:
     lines_out: list[str] = []
     for line in raw.splitlines():
@@ -116,6 +133,7 @@ def main() -> None:
         sys.exit(1)
 
     raw = NOTEBOOK.read_text(encoding="utf-8")
+    assert_notebook_cell_split(raw)
     src = notebook_to_python_source(raw)
 
     try:

@@ -4,7 +4,12 @@
 # MAGIC Synthetic VA claims + interoperability-flavored fields (FHIR, ICD-10, LOINC, SNOMED, Cerner/VistA-style, C-CDA refs).
 # MAGIC Catalog and schema come from the pipeline Unity Catalog settings (bundle `catalog` + `target`).
 # MAGIC Uses `pyspark.pipelines` (`dp`) for Lakeflow SDP / serverless; legacy `dlt` is not registered there.
+# MAGIC
+# MAGIC Python table definitions **must** live in a separate code cell below (`# COMMAND ----------`).
 
+# COMMAND ----------
+
+# Code cell: pipeline dataset definitions (executed by Lakeflow SDP — not markdown)
 from pyspark import pipelines as dp
 import pyspark.sql.functions as F
 from pyspark.sql.types import (

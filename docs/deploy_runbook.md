@@ -120,6 +120,8 @@ Some workspaces **do not allow** classic (cluster-backed) SDP pipelines. The bun
 
 On **Lakeflow / serverless SDP**, Python must use **`from pyspark import pipelines as dp`** with **`@dp.materialized_view`** (batch) or **`@dp.table`** (streaming), and reference other pipeline datasets with **`spark.table("dataset_name")`**. The legacy **`import dlt` / `@dlt.table` / `dlt.read`** module often does **not** register datasets in that runtime, which triggers this error. The demo notebook [`dab/notebooks/dlt_va_claims.py`](../dab/notebooks/dlt_va_claims.py) uses the `dp` API. See [Lakeflow SDP Python reference](https://docs.databricks.com/en/delta-live-tables/python-ref.html) and [What happened to `@dlt`?](https://docs.databricks.com/en/delta-live-tables/python-ref.html#what-happened-to-dlt).
 
+**Notebook format:** Databricks `.py` notebooks must separate markdown from code with **`# COMMAND ----------`**. If `%md` and Python are not split, the Python (including all `@dp` definitions) may never run as code—the pipeline then reports no tables. The demo notebook includes that delimiter after the header markdown.
+
 ## Optional job wrapper
 
 You can add a **job** that runs the pipeline using `pipeline_task` referencing `${resources.pipelines.va_claims_medallion.id}` after the bundle defines stable IDs — template was omitted from the repo to avoid first-deploy circular references; add under `dab/resources/` if your CLI version supports it.
