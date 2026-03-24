@@ -258,13 +258,13 @@ async def verify_genie_space(url: str = Query(..., min_length=16, max_length=204
     try:
         async with httpx.AsyncClient() as client:
             head = await client.head(url, headers=headers, follow_redirects=True, timeout=25.0)
-            if head.status_code == 405:
-                get = await client.get(
+            code = head.status_code
+            # Many UIs return 404 for HEAD while GET serves the SPA (Genie included).
+            if code in (404, 405):
+                get_resp = await client.get(
                     url, headers=headers, follow_redirects=True, timeout=25.0
                 )
-                code = get.status_code
-            else:
-                code = head.status_code
+                code = get_resp.status_code
         if code >= 400:
             return GenieVerifyResponse(
                 ok=False, statusCode=code, detail=f"Genie URL returned HTTP {code}"

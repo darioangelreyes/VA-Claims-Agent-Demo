@@ -13,6 +13,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { fetchClaimsApi } from '@/lib/claimsApi';
 
 const GENIE_SPACE_URL = import.meta.env.VITE_GENIE_SPACE_URL as string | undefined;
 
@@ -595,7 +596,7 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
   // Old real API call code - keeping for future use when database IDs are aligned
   const handleEvaluateClaimReal = async () => {
     try {
-      const response = await fetch('/api/claims/evaluate-agent', {
+      const response = await fetchClaimsApi('/evaluate-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ claimant_id: selectedClaim?.claimId })
@@ -777,7 +778,7 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
       setTimeseriesLoading(true);
       setTimeseriesError(null);
       try {
-        const tsRes = await fetch('/api/claims/adjudication/timeseries');
+        const tsRes = await fetchClaimsApi('/adjudication/timeseries');
         if (tsRes.ok) {
           const ts = await tsRes.json();
           setTimeseriesRows(Array.isArray(ts) ? ts : []);
@@ -817,7 +818,7 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     setGenieVerifyDetail(null);
     void (async () => {
       try {
-        const r = await fetch(`/api/claims/genie/verify?url=${encodeURIComponent(url)}`);
+        const r = await fetchClaimsApi(`/genie/verify?url=${encodeURIComponent(url)}`);
         const data = (await r.json()) as { ok?: boolean; detail?: string };
         if (cancelled) return;
         if (r.ok && data?.ok === true) {
@@ -856,7 +857,7 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
     setSuggestLoading(true);
     setSuggestResult(null);
     try {
-      const res = await fetch('/api/claims/adjudication/suggest', {
+      const res = await fetchClaimsApi('/adjudication/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ claimId: selectedClaim.claimId }),

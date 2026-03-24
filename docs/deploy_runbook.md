@@ -94,6 +94,14 @@ For **embedded Genie** on the PACT adjudication dashboard, set **`VITE_GENIE_SPA
 
 Ensure the app’s environment (or `.databricks.env` synced with the app) includes the same `DATABRICKS_*` variables as `.env.local` where applicable. Set **`DATABRICKS_SQL_WAREHOUSE_ID`** if SQL for timeseries/doc chunks does not resolve a warehouse automatically.
 
+### Databricks App: API returns **404 Not Found** for `/api/claims/...`
+
+Some deployments forward paths **without** the `/api` prefix. This repo registers the claims router **twice** (`/api/claims/...` and `/claims/...`) and the React client **retries** `/claims/...` if the first request is 404. Redeploy the app after pulling the latest server + client build.
+
+### Genie verify: **HTTP 404**
+
+Use the **exact Genie space URL** from the browser address bar while the space is open (same hostname as `DATABRICKS_HOST`). Verification uses **HEAD**, then **GET** if HEAD is 404/405. If GET is still 404, the path is wrong or the space was deleted — fix `VITE_GENIE_SPACE_URL` and rebuild the client.
+
 ## 5. Smoke tests
 
 ```bash

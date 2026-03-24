@@ -59,6 +59,8 @@ app.add_middleware(
 
 app.include_router(router, prefix='/api', tags=['api'])
 app.include_router(claims_router, prefix='/api')
+# Databricks Apps may route the Python process without an /api prefix; mirror claims routes.
+app.include_router(claims_router, prefix='', include_in_schema=False)
 
 
 @app.get('/health')
