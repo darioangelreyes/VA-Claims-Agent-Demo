@@ -1388,61 +1388,152 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
             </CardHeader>
             <CardContent className="pt-4">
               {selectedClaim ? (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* LEFT SECTION - Claim Information */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Claim Information */}
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-sm font-bold text-gray-500 mb-4">Claim Information</h3>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Claim ID</div>
-                          <div className="text-base font-semibold text-gray-900">{data.currentClaim.claimId}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Days Open</div>
-                          <div className={`text-base font-semibold ${data.currentClaim.daysOpen > 60 ? 'text-red-600' : data.currentClaim.daysOpen > 30 ? 'text-yellow-600' : 'text-green-600'}`}>
-                            {data.currentClaim.daysOpen} days
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    {/* LEFT — Claim & veteran */}
+                    <div className="space-y-6 lg:col-span-2">
+                      <div className="rounded-lg bg-gray-50 p-6">
+                        <h3 className="mb-4 text-sm font-bold text-gray-500">Claim Information</h3>
+                        <div className="grid grid-cols-2 gap-6">
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Claim ID</div>
+                            <div className="text-base font-semibold text-gray-900">{data.currentClaim.claimId}</div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Days Open</div>
+                            <div
+                              className={`text-base font-semibold ${data.currentClaim.daysOpen > 60 ? 'text-red-600' : data.currentClaim.daysOpen > 30 ? 'text-yellow-600' : 'text-green-600'}`}
+                            >
+                              {data.currentClaim.daysOpen} days
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Submission Date</div>
+                            <div className="text-base text-gray-900">{data.currentClaim.dateSubmitted}</div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Status</div>
+                            <Badge className="border-0 bg-blue-100 text-blue-800">{data.currentClaim.currentStatus}</Badge>
                           </div>
                         </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Submission Date</div>
-                          <div className="text-base text-gray-900">{data.currentClaim.dateSubmitted}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Status</div>
-                          <Badge className="bg-blue-100 text-blue-800 border-0">{data.currentClaim.currentStatus}</Badge>
+                      </div>
+
+                      <div className="rounded-lg bg-gray-50 p-6">
+                        <h3 className="mb-4 text-sm font-bold text-gray-500">Veteran Information</h3>
+                        <div className="grid grid-cols-2 gap-6">
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Veteran Name</div>
+                            <div className="text-base font-semibold text-gray-900">{data.currentClaim.name}</div>
+                          </div>
+                          <div>
+                            <div className="mb-1 text-xs text-gray-500">Branch of Service</div>
+                            <div className="text-base text-gray-900">{data.currentClaim.branch}</div>
+                          </div>
+                          <div className="col-span-2">
+                            <div className="mb-1 text-xs text-gray-500">Claimed Condition</div>
+                            <div className="text-base text-gray-900">{data.currentClaim.claimedConditions}</div>
+                          </div>
+                          {data.currentClaim.pactAct && (
+                            <div className="col-span-2">
+                              <Badge className="bg-blue-600 px-4 py-1 text-sm font-bold text-white">PACT ACT</Badge>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Veteran Information */}
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-sm font-bold text-gray-500 mb-4">Veteran Information</h3>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Veteran Name</div>
-                          <div className="text-base font-semibold text-gray-900">{data.currentClaim.name}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Branch of Service</div>
-                          <div className="text-base text-gray-900">{data.currentClaim.branch}</div>
-                        </div>
-                        <div className="col-span-2">
-                          <div className="text-xs text-gray-500 mb-1">Claimed Condition</div>
-                          <div className="text-base text-gray-900">{data.currentClaim.claimedConditions}</div>
-                        </div>
-                        {data.currentClaim.pactAct && (
-                          <div className="col-span-2">
-                            <Badge className="bg-blue-600 text-white px-4 py-1 text-sm font-bold">PACT ACT</Badge>
+                    {/* RIGHT — Compliance & fraud only */}
+                    <div className="space-y-4">
+                      <div className="rounded-lg bg-gray-50 p-6">
+                        <h3 className="mb-4 text-sm font-bold text-gray-500">Compliance</h3>
+
+                        <div className="flex flex-col items-center">
+                          <div className="relative h-32 w-32">
+                            <svg className="h-32 w-32 -rotate-90 transform">
+                              <circle cx="64" cy="64" r="56" stroke="#e5e7eb" strokeWidth="12" fill="none" />
+                              <circle
+                                cx="64"
+                                cy="64"
+                                r="56"
+                                stroke={
+                                  selectedClaim.complianceScore >= 90
+                                    ? '#10b981'
+                                    : selectedClaim.complianceScore >= 75
+                                      ? '#f59e0b'
+                                      : '#ef4444'
+                                }
+                                strokeWidth="12"
+                                fill="none"
+                                strokeDasharray={`${(selectedClaim.complianceScore / 100) * 351.86} 351.86`}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <div className="text-3xl font-bold text-gray-900">{selectedClaim.complianceScore}</div>
+                              <div className="text-xs uppercase text-gray-500">
+                                {selectedClaim.complianceScore >= 90
+                                  ? 'HIGH'
+                                  : selectedClaim.complianceScore >= 75
+                                    ? 'MEDIUM'
+                                    : 'LOW'}
+                              </div>
+                            </div>
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg bg-gray-50 p-6">
+                        <h3 className="mb-4 text-sm font-bold text-gray-500">Fraud Score</h3>
+
+                        <div className="mb-4 flex flex-col items-center">
+                          <div className="mb-1 text-4xl font-bold text-gray-900">
+                            {(selectedClaim.fraudScore * 100).toFixed(0)}%
+                          </div>
+                          <div
+                            className={`text-sm font-semibold ${selectedClaim.fraudScore > 0.3 ? 'text-red-600' : selectedClaim.fraudScore > 0.15 ? 'text-yellow-600' : 'text-green-600'}`}
+                          >
+                            {selectedClaim.fraudScore > 0.3
+                              ? 'HIGH RISK'
+                              : selectedClaim.fraudScore > 0.15
+                                ? 'MEDIUM RISK'
+                                : 'LOW RISK'}
+                          </div>
+                        </div>
+
+                        {selectedClaim.fraudScore > 0.2 && (
+                          <>
+                            <h4 className="mb-3 border-t border-gray-200 pt-4 text-xs font-bold text-gray-500">
+                              AI Fraud Analysis:
+                            </h4>
+                            {selectedClaim.fraudReason ? (
+                              <div className="mb-3 rounded border border-gray-300 bg-white p-3">
+                                <p className="text-sm leading-relaxed text-gray-700">{selectedClaim.fraudReason}</p>
+                              </div>
+                            ) : (
+                              <ul className="space-y-2">
+                                {selectedClaim.fraudScore > 0.3 && (
+                                  <li className="text-sm text-gray-600">• High fraud risk detected</li>
+                                )}
+                                {selectedClaim.complianceScore < 75 && (
+                                  <li className="text-sm text-gray-600">• Low compliance score</li>
+                                )}
+                                {data.currentClaim.daysOpen > 60 && (
+                                  <li className="text-sm text-gray-600">• Claim overdue for review</li>
+                                )}
+                              </ul>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
+                  </div>
 
-              {/* ACTION BUTTONS */}
-              <div className="pt-2">
-                <div className="text-sm font-bold text-gray-700 mb-3 text-center">ADJUDICATOR ACTIONS:</div>
+                  {/* Bottom row: Take Action (left) + AI Decision Support (right) */}
+                  <div className="grid grid-cols-1 gap-6 border-t border-gray-200 pt-6 lg:grid-cols-3">
+                    <div className="lg:col-span-2">
+                      <h3 className="mb-3 text-center text-sm font-bold text-gray-800 lg:text-left">TAKE ACTION</h3>
+              <div className="pt-0">
+                <div className="mb-3 text-center text-sm font-bold text-gray-700">ADJUDICATOR ACTIONS:</div>
                 
                 {/* Evaluate Claim Button - Prominent */}
                 <div className="flex justify-center mb-4">
@@ -1617,86 +1708,10 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                   </Button>
                 </div>
               </div>
-                  </div>
-
-                  {/* RIGHT SECTION - Compliance */}
-                  <div className="space-y-4">
-                    {/* Compliance Score */}
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-sm font-bold text-gray-500 mb-4">Compliance</h3>
-                      
-                      {/* Compliance Score Gauge */}
-                      <div className="flex flex-col items-center">
-                        <div className="relative w-32 h-32">
-                          <svg className="w-32 h-32 transform -rotate-90">
-                            <circle
-                              cx="64"
-                              cy="64"
-                              r="56"
-                              stroke="#e5e7eb"
-                              strokeWidth="12"
-                              fill="none"
-                            />
-                            <circle
-                              cx="64"
-                              cy="64"
-                              r="56"
-                              stroke={selectedClaim.complianceScore >= 90 ? '#10b981' : selectedClaim.complianceScore >= 75 ? '#f59e0b' : '#ef4444'}
-                              strokeWidth="12"
-                              fill="none"
-                              strokeDasharray={`${(selectedClaim.complianceScore / 100) * 351.86} 351.86`}
-                              strokeLinecap="round"
-                            />
-                          </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <div className="text-3xl font-bold text-gray-900">{selectedClaim.complianceScore}</div>
-                            <div className="text-xs text-gray-500 uppercase">
-                              {selectedClaim.complianceScore >= 90 ? 'HIGH' : selectedClaim.complianceScore >= 75 ? 'MEDIUM' : 'LOW'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
                     </div>
 
-                    {/* Fraud Score */}
-                    <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-sm font-bold text-gray-500 mb-4">Fraud Score</h3>
-                      
-                      {/* Fraud Score Display */}
-                      <div className="flex flex-col items-center mb-4">
-                        <div className="text-4xl font-bold text-gray-900 mb-1">{(selectedClaim.fraudScore * 100).toFixed(0)}%</div>
-                        <div className={`text-sm font-semibold ${selectedClaim.fraudScore > 0.3 ? 'text-red-600' : selectedClaim.fraudScore > 0.15 ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {selectedClaim.fraudScore > 0.3 ? 'HIGH RISK' : selectedClaim.fraudScore > 0.15 ? 'MEDIUM RISK' : 'LOW RISK'}
-                        </div>
-                      </div>
-
-                      {/* Flagged Reasons */}
-                      {selectedClaim.fraudScore > 0.2 && (
-                        <>
-                          <h4 className="text-xs font-bold text-gray-500 mb-3 border-t border-gray-200 pt-4">AI Fraud Analysis:</h4>
-                          {selectedClaim.fraudReason ? (
-                            <div className="bg-white rounded border border-gray-300 p-3 mb-3">
-                              <p className="text-sm text-gray-700 leading-relaxed">{selectedClaim.fraudReason}</p>
-                            </div>
-                          ) : (
-                            <ul className="space-y-2">
-                              {selectedClaim.fraudScore > 0.3 && (
-                                <li className="text-sm text-gray-600">• High fraud risk detected</li>
-                              )}
-                              {selectedClaim.complianceScore < 75 && (
-                                <li className="text-sm text-gray-600">• Low compliance score</li>
-                              )}
-                              {data.currentClaim.daysOpen > 60 && (
-                                <li className="text-sm text-gray-600">• Claim overdue for review</li>
-                              )}
-                            </ul>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* AI Decision Support — moved from top Genie card; bottom-right of current claim */}
-                    <div className="space-y-3 rounded-lg border-2 border-blue-200 bg-blue-50/80 p-4">
+                    {/* AI Decision Support — bottom-right of this card, beside Take Action */}
+                    <div className="space-y-3 self-start rounded-lg border-2 border-blue-200 bg-blue-50/80 p-4 lg:sticky lg:top-4">
                       <h3 className="text-sm font-bold text-blue-900">AI DECISION SUPPORT</h3>
                       <p className="text-xs leading-relaxed text-blue-800">
                         Suggestions use SQL-selected policy chunks (no Vector Search). Use{' '}
