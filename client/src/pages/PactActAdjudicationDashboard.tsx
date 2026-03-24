@@ -1009,32 +1009,26 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
         {/* Weekly trends — full width, collapsible (expanded by default) */}
         <div className="mb-6">
           <Card className="border-2 border-gray-300 bg-white shadow-md">
-            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-2">
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-lg font-bold">CLAIMS TRENDS (weekly)</CardTitle>
-                <p className="text-sm text-gray-600">
-                  From Unity Catalog gold_claims_timeseries after SDP run
-                </p>
-              </div>
-              <Button
+            <CardHeader className="space-y-1.5 pb-2">
+              <button
                 type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1 border-gray-300"
+                className="flex w-full items-center justify-between gap-3 rounded-md py-1 text-left outline-none ring-offset-2 transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-blue-600"
                 onClick={() => setTrendsExpanded((e) => !e)}
                 aria-expanded={trendsExpanded}
                 aria-controls="claims-trends-panel"
               >
+                <span className="text-lg font-bold tracking-wide text-gray-900">
+                  CLAIMS TRENDS (weekly)
+                </span>
                 {trendsExpanded ? (
-                  <>
-                    Collapse <ChevronUp className="h-4 w-4" aria-hidden />
-                  </>
+                  <ChevronUp className="h-5 w-5 shrink-0 text-gray-600" aria-hidden />
                 ) : (
-                  <>
-                    Expand <ChevronDown className="h-4 w-4" aria-hidden />
-                  </>
+                  <ChevronDown className="h-5 w-5 shrink-0 text-gray-600" aria-hidden />
                 )}
-              </Button>
+              </button>
+              <p className="text-sm text-gray-600">
+                From Unity Catalog gold_claims_timeseries after SDP run
+              </p>
             </CardHeader>
             {trendsExpanded ? (
               <CardContent id="claims-trends-panel" className="h-72 pt-0">
@@ -1585,15 +1579,11 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                     className="border-2 border-indigo-700 bg-indigo-50 font-bold text-indigo-900 hover:bg-indigo-100 px-8"
                     disabled={!selectedClaim || suggestLoading}
                     onClick={() => void runAdjudicationSuggest()}
-                    title="Same as &quot;Suggest decision for selected claim&quot; in AI Decision Support — policy-grounded suggestion"
+                    title="Policy-grounded adjudication suggestion for the selected claim"
                   >
                     {suggestLoading ? 'Working…' : 'AI DECISION'}
                   </Button>
                 </div>
-                <p className="mb-3 text-center text-xs text-gray-500">
-                  AI DECISION runs the same suggest API as the button in AI Decision Support; results appear in the
-                  panel on the right.
-                </p>
 
                 {/* DENY FORM */}
                 {showDenyForm && (
@@ -1724,89 +1714,52 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
               </div>
                     </div>
 
-                    {/* AI Decision Support — bottom-right of this card, beside Take Action */}
-                    <div className="space-y-3 self-start rounded-lg border-2 border-blue-200 bg-blue-50/80 p-4 lg:sticky lg:top-4">
-                      <h3 className="text-sm font-bold text-blue-900">AI DECISION SUPPORT</h3>
-                      <p className="text-xs leading-relaxed text-blue-800">
-                        Suggestions use SQL-selected policy chunks (no Vector Search). Use{' '}
-                        <strong className="font-semibold">Ask Genie</strong> (screen bottom-right) for natural-language
-                        Q&amp;A over your Claims Genie space.
-                      </p>
-                      {!GENIE_SPACE_URL?.trim() ? (
-                        <p className="text-xs text-amber-900">
-                          Set <code className="rounded bg-white/80 px-1">VITE_GENIE_SPACE_URL</code> for the Genie link;
-                          set <code className="rounded bg-white/80 px-1">DATABRICKS_GENIE_SPACE_ID</code> or{' '}
-                          <code className="rounded bg-white/80 px-1">DATABRICKS_GENIE_SPACE_URL</code> on the app for
-                          the floating chat.
-                        </p>
-                      ) : null}
-                      {GENIE_SPACE_URL?.trim() ? (
-                        <a
-                          href={GENIE_SPACE_URL.trim()}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center text-sm font-semibold text-blue-800 underline"
-                        >
-                          Open Genie space (new tab)
-                        </a>
-                      ) : null}
-                      <div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="w-full sm:w-auto"
-                          disabled={!selectedClaim || suggestLoading}
-                          onClick={() => void runAdjudicationSuggest()}
-                        >
-                          {suggestLoading ? 'Suggesting…' : 'Suggest decision for selected claim'}
-                        </Button>
-                      </div>
-                      {suggestResult && (
-                        <div className="space-y-2 rounded border border-blue-200 bg-white p-3 text-sm shadow-sm">
+                    {/* AI suggestion results only — trigger is AI DECISION in Take Action */}
+                    {suggestResult ? (
+                      <div className="self-start space-y-2 rounded-lg border-2 border-blue-200 bg-white p-3 text-sm shadow-sm lg:sticky lg:top-4">
+                        <div>
+                          <strong>Decision:</strong> {suggestResult.decision}{' '}
+                          <span className="text-gray-600">
+                            (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
+                          </span>
+                        </div>
+                        <div>
+                          <strong>Reasons:</strong>
+                          <ul className="list-disc pl-5">
+                            {suggestResult.reasons.map((r, i) => (
+                              <li key={i}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        {suggestResult.citations?.length ? (
                           <div>
-                            <strong>Decision:</strong> {suggestResult.decision}{' '}
-                            <span className="text-gray-600">
-                              (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
-                            </span>
-                          </div>
-                          <div>
-                            <strong>Reasons:</strong>
+                            <strong>Citations:</strong>
                             <ul className="list-disc pl-5">
-                              {suggestResult.reasons.map((r, i) => (
-                                <li key={i}>{r}</li>
+                              {suggestResult.citations.map((c, i) => (
+                                <li key={i}>
+                                  {c.title || c.chunkId}
+                                  {c.sourceUrl ? (
+                                    <>
+                                      {' '}
+                                      <a
+                                        href={c.sourceUrl}
+                                        className="text-blue-700 underline"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                      >
+                                        source
+                                      </a>
+                                    </>
+                                  ) : null}
+                                </li>
                               ))}
                             </ul>
                           </div>
-                          {suggestResult.citations?.length ? (
-                            <div>
-                              <strong>Citations:</strong>
-                              <ul className="list-disc pl-5">
-                                {suggestResult.citations.map((c, i) => (
-                                  <li key={i}>
-                                    {c.title || c.chunkId}
-                                    {c.sourceUrl ? (
-                                      <>
-                                        {' '}
-                                        <a
-                                          href={c.sourceUrl}
-                                          className="text-blue-700 underline"
-                                          target="_blank"
-                                          rel="noreferrer"
-                                        >
-                                          source
-                                        </a>
-                                      </>
-                                    ) : null}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : null}
-                          <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
-                          <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
-                        </div>
-                      )}
-                    </div>
+                        ) : null}
+                        <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
+                        <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ) : (
