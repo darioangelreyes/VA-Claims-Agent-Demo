@@ -1581,69 +1581,6 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                   </Button>
                 </div>
 
-                {/* AI adjudication suggest — same card, Take Action column */}
-                <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50/90 p-4">
-                  <p className="mb-3 text-xs leading-relaxed text-blue-900">
-                    Suggestion uses SQL-selected policy chunks (no Vector Search). Not a final determination.
-                  </p>
-                  <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="font-semibold"
-                      disabled={!selectedClaim || suggestLoading}
-                      onClick={() => void runAdjudicationSuggest()}
-                    >
-                      {suggestLoading ? 'Suggesting…' : 'Suggest decision for selected claim'}
-                    </Button>
-                  </div>
-                  {suggestResult ? (
-                    <div className="mt-3 space-y-2 rounded border border-blue-200 bg-white p-3 text-sm shadow-sm">
-                      <div>
-                        <strong>Decision:</strong> {suggestResult.decision}{' '}
-                        <span className="text-gray-600">
-                          (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
-                        </span>
-                      </div>
-                      <div>
-                        <strong>Reasons:</strong>
-                        <ul className="list-disc pl-5">
-                          {suggestResult.reasons.map((r, i) => (
-                            <li key={i}>{r}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      {suggestResult.citations?.length ? (
-                        <div>
-                          <strong>Citations:</strong>
-                          <ul className="list-disc pl-5">
-                            {suggestResult.citations.map((c, i) => (
-                              <li key={i}>
-                                {c.title || c.chunkId}
-                                {c.sourceUrl ? (
-                                  <>
-                                    {' '}
-                                    <a
-                                      href={c.sourceUrl}
-                                      className="text-blue-700 underline"
-                                      target="_blank"
-                                      rel="noreferrer"
-                                    >
-                                      source
-                                    </a>
-                                  </>
-                                ) : null}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
-                      <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
-                    </div>
-                  ) : null}
-                </div>
-
                 {/* DENY FORM */}
                 {showDenyForm && (
                   <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-3">
@@ -1773,19 +1710,20 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
               </div>
                     </div>
 
-                    {/* Genie / workspace links — suggest lives in Take Action column */}
-                    <div className="space-y-3 self-start rounded-lg border-2 border-slate-200 bg-slate-50/90 p-4 lg:sticky lg:top-4">
-                      <h3 className="text-sm font-bold text-slate-800">GENIE &amp; LINKS</h3>
-                      <p className="text-xs leading-relaxed text-slate-700">
-                        Use <strong className="font-semibold">Ask Genie</strong> (floating control, bottom-right) for
-                        natural-language Q&amp;A over your Claims Genie space.
+                    {/* AI Decision Support — bottom-right of this card, beside Take Action */}
+                    <div className="space-y-3 self-start rounded-lg border-2 border-blue-200 bg-blue-50/80 p-4 lg:sticky lg:top-4">
+                      <h3 className="text-sm font-bold text-blue-900">AI DECISION SUPPORT</h3>
+                      <p className="text-xs leading-relaxed text-blue-800">
+                        Suggestions use SQL-selected policy chunks (no Vector Search). Use{' '}
+                        <strong className="font-semibold">Ask Genie</strong> (screen bottom-right) for natural-language
+                        Q&amp;A over your Claims Genie space.
                       </p>
                       {!GENIE_SPACE_URL?.trim() ? (
                         <p className="text-xs text-amber-900">
-                          Set <code className="rounded bg-white px-1">VITE_GENIE_SPACE_URL</code> for the link below; set{' '}
-                          <code className="rounded bg-white px-1">DATABRICKS_GENIE_SPACE_ID</code> or{' '}
-                          <code className="rounded bg-white px-1">DATABRICKS_GENIE_SPACE_URL</code> on the app for the
-                          chat proxy.
+                          Set <code className="rounded bg-white/80 px-1">VITE_GENIE_SPACE_URL</code> for the Genie link;
+                          set <code className="rounded bg-white/80 px-1">DATABRICKS_GENIE_SPACE_ID</code> or{' '}
+                          <code className="rounded bg-white/80 px-1">DATABRICKS_GENIE_SPACE_URL</code> on the app for
+                          the floating chat.
                         </p>
                       ) : null}
                       {GENIE_SPACE_URL?.trim() ? (
@@ -1798,6 +1736,62 @@ I'll conduct a comprehensive evaluation of this veteran's claim for ${condition}
                           Open Genie space (new tab)
                         </a>
                       ) : null}
+                      <div>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="w-full sm:w-auto"
+                          disabled={!selectedClaim || suggestLoading}
+                          onClick={() => void runAdjudicationSuggest()}
+                        >
+                          {suggestLoading ? 'Suggesting…' : 'Suggest decision for selected claim'}
+                        </Button>
+                      </div>
+                      {suggestResult && (
+                        <div className="space-y-2 rounded border border-blue-200 bg-white p-3 text-sm shadow-sm">
+                          <div>
+                            <strong>Decision:</strong> {suggestResult.decision}{' '}
+                            <span className="text-gray-600">
+                              (confidence {(suggestResult.confidence * 100).toFixed(0)}%)
+                            </span>
+                          </div>
+                          <div>
+                            <strong>Reasons:</strong>
+                            <ul className="list-disc pl-5">
+                              {suggestResult.reasons.map((r, i) => (
+                                <li key={i}>{r}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          {suggestResult.citations?.length ? (
+                            <div>
+                              <strong>Citations:</strong>
+                              <ul className="list-disc pl-5">
+                                {suggestResult.citations.map((c, i) => (
+                                  <li key={i}>
+                                    {c.title || c.chunkId}
+                                    {c.sourceUrl ? (
+                                      <>
+                                        {' '}
+                                        <a
+                                          href={c.sourceUrl}
+                                          className="text-blue-700 underline"
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          source
+                                        </a>
+                                      </>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                          <p className="text-xs text-gray-600">{suggestResult.disclaimer}</p>
+                          <p className="text-xs text-gray-400">Source: {suggestResult.source}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
