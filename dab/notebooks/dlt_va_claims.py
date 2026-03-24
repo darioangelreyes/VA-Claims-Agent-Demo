@@ -357,12 +357,11 @@ def claim_evidence():
             F.array(F.lit("COMPLETE"), F.lit("PENDING"), F.lit("INCOMPLETE")),
             (F.abs(F.hash(F.col("claim_id"), F.col("evidence_type"))) % 3 + 1).cast("int"),
         ).alias("status"),
+        # Alias must wrap the full Column (+ binds looser than .method()); otherwise Delta sees an auto name with invalid characters.
         (
             F.lit(70.0)
-            + (F.abs(F.hash(F.col("evidence_type"))) % F.lit(30)).cast(DoubleType()).alias(
-                "completeness_score"
-            )
-        ),
+            + (F.abs(F.hash(F.col("evidence_type"))) % F.lit(30)).cast(DoubleType())
+        ).alias("completeness_score"),
     )
 
 

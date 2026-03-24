@@ -122,6 +122,10 @@ On **Lakeflow / serverless SDP**, Python must use **`from pyspark import pipelin
 
 **Notebook format:** Databricks `.py` notebooks must separate markdown from code with **`# COMMAND ----------`**. If `%md` and Python are not split, the Python (including all `@dp` definitions) may never run as code—the pipeline then reports no tables. The demo notebook includes that delimiter after the header markdown.
 
+### `DELTA_INVALID_CHARACTERS_IN_COLUMN_NAMES`
+
+Usually a **bad `.alias()` scope**: in PySpark, `a + b.cast(...).alias("x")` binds `.alias` to **`b` only**; the `+` then yields an auto-generated column name with `+`, `(`, etc., which Delta rejects. Wrap the full column expression in parentheses, then call `.alias("safe_name")` on the result.
+
 ## Optional job wrapper
 
 You can add a **job** that runs the pipeline using `pipeline_task` referencing `${resources.pipelines.va_claims_medallion.id}` after the bundle defines stable IDs — template was omitted from the repo to avoid first-deploy circular references; add under `dab/resources/` if your CLI version supports it.
